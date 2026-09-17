@@ -191,10 +191,15 @@ arm confounds arm with wall-clock time, and an early-access API days after launc
 deploys and load swings under it.
 
 **Failures are rows, not omissions.** Every errored trial records its error; analysis
-reports completion rate per arm. This is concrete here: mode 5 at 100% context can exceed
-the documented 32k state ceiling, so the arm most likely to fail is the one under
-measurement. Dropping those silently would make padding look free. Adapters cap context to
-stay under the limit and the runner records every truncation.
+reports completion rate per arm. This is concrete here: mode 5 at 100% context can exceed the
+documented limit, so the arm most likely to fail is the one under measurement. Dropping those
+silently would make padding look free. Adapters cap context to stay under the limit and the
+runner records every truncation.
+
+The limit is "64k tokens together for all `state` and `questions`; 32k tokens for the `state` +
+the longest `question`". It is not a ceiling on state alone, so the cap has to be computed
+against state plus the rendered question or the padding arm will fail at a threshold the
+adapter thinks it's below.
 
 **Trial record** — the publishable artifact:
 
