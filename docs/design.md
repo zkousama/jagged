@@ -206,9 +206,13 @@ Repeats average within item first.
 - Accuracy at 0.5, because that's the documented cut and what people will ship.
 - Calibration: ECE plus reliability diagram.
 
-**Calibration is the most likely real finding.** TypeSafe distinguishes confidence from
-answer probability in its own docs, and nobody has checked that against a real task. The
-question worth asking is whether calibration degrades while accuracy holds. A model that
+**Calibration is the most likely real finding.** A Noul returns no confidence value; the docs
+say plainly that "Noul does not return a separate confidence value", because the noul *is* the
+probability that the answer is yes. Confidence is a Choice and Score statistic. So the number
+this study calibrates is the only number Jev gives you, and the only published guidance on
+trusting it is to "test with your own data, and adjust as you observe results". Nobody has
+published that test. The question worth asking is whether calibration degrades while accuracy
+holds. A model that
 stays accurate but grows overconfident under state padding is more dangerous than one that
 visibly degrades, because every downstream confidence gate stops working with nothing
 looking wrong.
