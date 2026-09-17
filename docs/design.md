@@ -39,19 +39,25 @@ with irrelevant detail is only a generic operation if the substrate has already 
 which fields the judgment legitimately needs.
 
 ```python
-class Numeric(Struct):
-    raw: str        # "4.2.1 vs >=4.0.0 <4.17.21"
+class Dual(Struct):
+    raw: str        # "4.2.1 vs >=4.0.0 <4.17.21", or an ISO date
     banded: str     # "two minor versions before the fix"
 
 class Item(Struct):
     id: str
     core: dict[str, str]        # fields the judgment needs
     context: dict[str, str]     # real, present, decision-irrelevant -> padding probe
-    numeric: dict[str, Numeric] # tagged, so numeric<->semantic is mechanical
-    temporal: dict[str, str]    # ISO dates, tagged so date<->relative is mechanical
+    numeric: dict[str, Dual]    # tagged, so numeric<->semantic is mechanical
+    temporal: dict[str, Dual]   # same, for date<->relative
     label: bool                 # ground truth
     stratum: str                # difficulty band
 ```
+
+Temporal fields carry **both** forms for the same reason numeric ones do. An earlier
+draft typed them as a bare ISO string, which made the baseline omit dates entirely and
+turned mode 3 into a test of whether adding a field hurts rather than whether its
+representation matters. A manipulation that changes presence is not a manipulation of
+representation.
 
 `banded` is load-bearing. It's what lets the same question be asked numerically and
 semantically over identical items, which is the whole of mode 2.
