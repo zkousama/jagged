@@ -229,20 +229,32 @@ adapter thinks it's below.
 **Trial record** — the publishable artifact:
 
 ```
-trial_id, substrate, item_id, stratum, arm, repeat,
+trial_id, substrate, item_id, stratum, arm, repeat, question,
 request_hash, request (verbatim), response (verbatim),
-probability, label, latency_ms, error,
+probability, label, latency_ms, call_input_tokens, call_output_tokens, error,
 model, sdk_version, run_id, git_commit, ts
 ```
 
 Verbatim request and response are what make "recompute my numbers without an API key" true.
+
+`call_*` rather than plain `input_tokens`: usage is billed per call, and one call carries
+every question asked against that state. The prefix is there so nobody sums the column
+across rows and doubles the bill.
+
+**Set the timeout explicitly.** The SDK defaults to 10 seconds. The padding arms send the
+largest states in the study by construction, so the default would cut them off more often
+than any other arm — and a completion-rate gap that tracks state size is indistinguishable
+from the effect mode 5 is trying to measure. An unset default would have manufactured the
+result.
 
 **Run manifest** pins model version, SDK version, selection seed and git commit. The
 jaggedness page is versioned at `jev-1.13`; these results expire with it.
 
 **Budget.** Roughly 500 items x 11 arms x 3 repeats ~ 16k calls per substrate. Pinned as
 config. Jev is early access with no public pricing, so cost is an unknown to measure during
-the pilot rather than estimate now.
+the pilot rather than estimate now — though the response carries `input_tokens` and
+`output_tokens`, so the pilot measures consumption exactly and only the price stays
+unknown.
 
 ## 7. Analysis
 
@@ -290,7 +302,9 @@ infer more.
 4. Forest plot of every delta with CIs and the placebo band drawn in
 
 Latency comes free and is worth reporting; speed is Jev's pitch and nobody has measured
-what padding costs in milliseconds.
+what padding costs in milliseconds. Token consumption comes free the same way, off the
+response's own usage block, and on the dose-response arms it is the more useful of the two:
+it is what padding actually costs to run.
 
 ## 8. Pre-registration and the pilot
 
@@ -360,7 +374,9 @@ To be carried into the write-up, not buried:
 - Is Jev deterministic across identical calls? The jaggedness page says nothing about
   determinism, temperature or variance, so there is no documented answer to check against.
   The repeat arm answers it.
-- What are the rate limits and per-call cost? Unknown; measured during the pilot.
+- What are the rate limits and the price per token? The SDK reports token counts per call,
+  so consumption is measured rather than guessed; the rate limits and the price are not
+  published and the pilot has to find them.
 - Does the AfD close result parse cleanly at scale, or does it need per-era handling?
 - Does 500 items give usable CIs on per-stratum deltas, or does the budget need shifting
   from arms to items?
