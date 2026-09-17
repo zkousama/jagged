@@ -332,7 +332,9 @@ To be carried into the write-up, not buried:
 
 ## 12. Open questions
 
-- Is Jev deterministic across identical calls? Unknown; the repeat arm answers it.
+- Is Jev deterministic across identical calls? The jaggedness page says nothing about
+  determinism, temperature or variance, so there is no documented answer to check against.
+  The repeat arm answers it.
 - What are the rate limits and per-call cost? Unknown; measured during the pilot.
 - Does the AfD close result parse cleanly at scale, or does it need per-era handling?
 - Does 500 items give usable CIs on per-stratum deltas, or does the budget need shifting
