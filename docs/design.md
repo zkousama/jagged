@@ -49,7 +49,7 @@ class Item(Struct):
     context: dict[str, str]     # real, present, decision-irrelevant -> padding probe
     numeric: dict[str, Dual]    # tagged, so numeric<->semantic is mechanical
     temporal: dict[str, Dual]   # same, for date<->relative
-    label: bool                 # ground truth
+    labels: dict[str, bool]     # ground truth, one per question
     stratum: str                # difficulty band
 ```
 
@@ -62,16 +62,31 @@ representation.
 `banded` is load-bearing. It's what lets the same question be asked numerically and
 semantically over identical items, which is the whole of mode 2.
 
+`labels` is a dict because one state can carry more than one judgment, and mode 3 needs
+that. A date manipulation only measures date handling if some judgment reads the date, and
+"was this article deleted" doesn't. So AfD carries a second question — did the discussion
+close before the seven-day listing period elapsed — whose ground truth is the two
+timestamps and nothing else. Both questions ride on a single call, since the documented
+budget covers all state and questions together.
+
+The banded form of a temporal field has to stop short of the answer. "Closed within a week"
+would settle the window question outright and hand mode 3 an effect size that was really a
+giveaway; "closed three days after it was nominated" is the arithmetic done in code, which
+is what the docs actually prescribe, and still leaves the model something to weigh.
+
 ```python
 class Substrate(Protocol):
     name: str
     def load(self, budget: int) -> list[Item]: ...
-    def question(self) -> Question: ...   # the baseline Noul, un-manipulated
+    def questions(self) -> dict[str, Question]: ...  # baseline Nouls, un-manipulated
 ```
 
 Two constraints belong in the interface rather than in discipline:
 
 - **Adapters never see the conditions.** They can't tailor items to flatter a manipulation.
+- **Question order is the substrate's.** Question-level arms reword the first entry, since
+  there is no generic way to reword an arbitrary question. State-level arms reach all of
+  them by construction.
 - **`stratum` is assigned by a rule fixed before any model call.** Difficulty cannot be
   redefined after seeing results.
 
@@ -91,8 +106,9 @@ implicitly betting on.
 - `core`: nomination rationale, article summary, the policies actually cited
 - `context`: boilerplate, signatures, thread furniture, procedural chatter
 - `numeric`: participation counts, source counts
-- `temporal`: nomination and close dates
-- `label`: the closing decision (see the labelling choice below)
+- `temporal`: the listing length, as two ISO dates or as the gap in words
+- `labels`: `verdict`, the closing decision (see the labelling choice below); and
+  `window`, whether the close came before the seven-day listing period elapsed
 - `stratum`: participation volume and disagreement, banded
 
 **Confound, and the labelling choice.** AfD outcomes partly reflect who showed up, not only
@@ -106,6 +122,10 @@ labellings address this, and exactly one is frozen at pre-registration:
 
 Verdict-restricted is the default unless the pilot shows unanimous closes are too scarce or
 too easy to stratify usefully. The write-up states the confound either way.
+
+A discussion without two parseable timestamps is dropped rather than half-labelled. An item
+that could answer one question and not the other would put mode 3 on a different item set
+from every other arm, which is worse than a smaller corpus.
 
 **To verify during implementation:** the exact close-template syntax and how reliably the
 result string parses. Observed `xfd-closed` and the Afd-top boilerplate on a sampled page;
@@ -122,7 +142,7 @@ underneath.
 - `core`: advisory summary, ecosystem, package
 - `context`: advisory prose, references, credits
 - `numeric`: the version comparison itself
-- `label`: computed from the published range
+- `labels`: `affected`, computed from the published range
 - `stratum`: version distance from the boundary
 
 **Risk.** This may confirm the docs rather than surprise. "Not a calculator, as documented"
@@ -143,7 +163,7 @@ boundary has somewhere to live that isn't the instruction string.
 |---|---|---|
 | 1 | Literal reading | Boundary cases dropped from the criteria, intent left implicit |
 | 2 | Math and Numbers | `banded` replaced with `raw` |
-| 3 | Date and time comparison | Relative phrasing replaced with raw ISO dates |
+| 3 | Date and time comparison | Relative phrasing replaced with raw ISO dates, read on `window` |
 | 4 | Indirection | Semantically equivalent double negative |
 | 5 | Large state full of irrelevant detail | `core` + 25% / 50% / 100% of `context` |
 | 6 | Adversarial content | Directive injected into a `context` field |
@@ -155,6 +175,11 @@ one piece of TypeSafe's advice at a time, so the mapping to their list has to be
 a glance.
 
 Mode 5 is a dose-response rather than on/off, because three points make a curve.
+
+**Each arm is read on the question its manipulation reaches.** Mode 3 on `window`, which is
+the only judgment here that consults a date; everything else on `verdict`. Every arm is
+reported on both, and which one the decision rule counts is pre-registered rather than
+chosen once the deltas are in.
 
 **Mode 4 needs care.** The direct and double-negative phrasings must be genuinely
 equivalent or the arm measures comprehension of a badly worded question instead of
@@ -225,7 +250,7 @@ the pilot rather than estimate now.
 replacement, recompute the metric in both arms on the resampled set, take the difference.
 Repeats average within item first.
 
-**Metrics per arm:**
+**Metrics per arm and question:**
 - AUC, primary. Noul returns a probability; thresholding discards information.
 - Accuracy at 0.5, because that's the documented cut and what people will ship.
 - Calibration: ECE plus reliability diagram.
