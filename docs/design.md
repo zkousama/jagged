@@ -133,25 +133,44 @@ the deliverable, and the write-up should say so up front rather than oversell.
 ## 5. Conditions
 
 Baseline is the docs-compliant configuration: state trimmed to `core`, arithmetic
-precomputed, dates resolved to relative phrasing, boundary conditions stated, instructions
-and criteria aligned.
+precomputed, dates resolved to relative phrasing, boundary cases stated in the `criteria`,
+instructions and criteria aligned. The criteria placement is the docs' own wording — "state
+the exact condition in the `instructions`. Be specific. Put boundary cases in the criteria"
+— and a Noul takes `criteria` as descriptions of its `true` and `false` cases, so the
+boundary has somewhere to live that isn't the instruction string.
 
 | # | Mode | Condition (one variable changed) |
 |---|---|---|
-| 1 | Literal reading | Boundary clause removed, intent left implicit |
-| 2 | Math and numbers | `banded` replaced with `raw` |
-| 3 | Date/time | Relative phrasing replaced with raw ISO dates |
+| 1 | Literal reading | Boundary cases dropped from the criteria, intent left implicit |
+| 2 | Math and Numbers | `banded` replaced with `raw` |
+| 3 | Date and time comparison | Relative phrasing replaced with raw ISO dates |
 | 4 | Indirection | Semantically equivalent double negative |
-| 5 | Irrelevant context | `core` + 25% / 50% / 100% of `context` |
-| 6 | Contradictory criteria | Criteria polarity inverted against instructions |
-| 7 | Adversarial | Directive injected into a `context` field |
+| 5 | Large state full of irrelevant detail | `core` + 25% / 50% / 100% of `context` |
+| 6 | Adversarial content | Directive injected into a `context` field |
+| 7 | Contradictory instructions and criteria | Criteria polarity inverted against instructions |
 | P | Placebo | State field order shuffled |
+
+Numbers and names in that table are the page's own, in the page's order. The study sets aside
+one piece of TypeSafe's advice at a time, so the mapping to their list has to be checkable at
+a glance.
 
 Mode 5 is a dose-response rather than on/off, because three points make a curve.
 
 **Mode 4 needs care.** The direct and double-negative phrasings must be genuinely
 equivalent or the arm measures comprehension of a badly worded question instead of
 indirection. Both phrasings are human-reviewed and published verbatim so readers can judge.
+
+**Mode 6 has three shapes and AfD supplies a second one free.** The page names them:
+"an injected instruction, a deliberately misleading framing, or text that argues for its own
+classification". The arm above is the first. The third is what a deletion debate *is* —
+editors arguing a classification, in the real corpus, already labelled — so it costs an arm
+rather than a corpus. v1 ships the injection and names the other two; promoting either to its
+own arm takes the cross product from 11 to 12.
+
+Worth noting for the write-up: the remedy the page prescribes for this mode is "write precise
+prompts, and test edge cases before deploying", which is advice to test rather than a
+mitigation. It's the weakest of the eight, and this is the one arm measuring a failure its
+own documentation has no answer for.
 
 **The placebo is the second noise floor.** Field ordering is a change the docs give no
 reason to care about. Every real effect must clear it. If shuffling moves results as much
