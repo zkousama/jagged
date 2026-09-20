@@ -27,9 +27,8 @@ In: seven of the nine documented modes, two substrates, one model version.
 Out:
 - **Generation** (mode 9). Jev isn't trained to generate and the docs say so. Testing it
   would be theatre. Stated in the write-up rather than faked.
-- **Common-sense structural invariants** (mode 8), as an arm. It appeared on the page
-  between 2026-09-17 and 2026-09-20 without the model version changing, which is its own
-  finding (see the drift note in §6). It doesn't fit the one-variable-per-arm frame: the
+- **Common-sense structural invariants** (mode 8), as an arm. It doesn't fit the
+  one-variable-per-arm frame: the
   page's claim is that separate questions don't stand in arithmetic relation to each
   other, so there is no baseline to degrade from. It is also the cheapest of the nine to
   measure — ask a judgment and its negation as separate Nouls, sum the probabilities,
@@ -281,11 +280,11 @@ catalogue listed 446 models on 2026-09-20 and none of them was TypeSafe's, so a 
 report of `typesafe/jev-1.13` there doesn't hold. Any route whose answers can't be
 attributed to a version is unusable for a study pinned to one.
 
-**Pin the page, not just the model.** On 2026-09-17 the page listed eight modes. On
-2026-09-20 it listed nine, with "Common-sense structural invariants" inserted at 8 and
-Generation moved to 9 — same model version, three days apart. The control condition is
-that page's advice, so a run has to archive the page and record the date it was read, or
-the baseline isn't reproducible. Versioning by model id alone would have missed this.
+**Pin the page, not just the model.** The page carries its own stamp — "Applies to
+`jev-1.13`. Last reviewed 2026-09-17" — and no changelog. The control condition is that
+page's advice, so the run manifest records that line verbatim alongside the model id, and
+the run archives the page as read. A review date that moves while the model id holds still
+would otherwise change the baseline with nothing in the results to show it.
 
 **Budget.** Roughly 500 items x 11 arms x 3 repeats ~ 16k calls per substrate. Pinned as
 config. Jev is early access with no public pricing, so cost is an unknown to measure during
@@ -403,8 +402,8 @@ To be carried into the write-up, not buried:
 - Two substrates is suggestive of generality, not evidence of it.
 - AfD outcomes carry social dynamics alongside policy; mitigated, not eliminated.
 - OSV data is clean relative to real-world inputs, so measured degradation is a lower bound.
-- Results pin to `jev-1.13` and to the jaggedness page as read on a stated date. The page
-  moved once already at fixed model version.
+- Results pin to `jev-1.13` and to the jaggedness page at its stated review date, captured
+  in the run manifest.
 - Modes 8 and 9 are measured or excluded rather than run as arms, so the one-piece-at-a-time
   design covers seven of nine, and the write-up says which.
 - Item selection is budget-limited; strata are balanced by design but not exhaustive.
