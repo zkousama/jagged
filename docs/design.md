@@ -273,9 +273,12 @@ agree on this. Vercel's AI Gateway exposes only `typesafe-ai/jev`, reports `mode
 "typesafe-ai/jev"` back, and 404s every versioned id — so a run there cannot say which Jev
 answered. It also refuses `providerOptions.typesafe.probabilityDecimals` as `unsupported`
 and holds probabilities at two decimals, which costs AUC resolution through ties.
-Cloudflare Workers AI returns `"model": "jev-1.13.0"` in the response. OpenRouter addresses
-it as `typesafe/jev-1.13`. The TypeSafe API takes a versioned id directly and is the only
-route documented to accept the precision options. Any route whose answers can't be
+Cloudflare's own model page documents a response carrying `"model": "jev-1.13.0"`, which is
+enough to record what answered even if the request can't pin it; that is documented rather
+than measured here. The TypeSafe API takes a versioned id directly and is the only route
+documented to accept the precision options. OpenRouter carries no Jev entry — its public
+catalogue listed 446 models on 2026-09-20 and none of them was TypeSafe's, so a secondhand
+report of `typesafe/jev-1.13` there doesn't hold. Any route whose answers can't be
 attributed to a version is unusable for a study pinned to one.
 
 **Pin the page, not just the model.** On 2026-09-17 the page listed eight modes. On
