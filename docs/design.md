@@ -4,7 +4,7 @@ Design spec. 2026-09-17.
 
 ## 1. The question
 
-TypeSafe publishes a page listing eight ways jev-1.13 degrades, and for each one it
+TypeSafe publishes a page listing nine ways jev-1.13 degrades, and for each one it
 prescribes a remedy: trim the state, move arithmetic into code, resolve dates before you
 ask, phrase instructions directly, keep criteria aligned with instructions. The page is
 prose. No magnitudes, no conditions, no indication of which remedies matter.
@@ -22,11 +22,20 @@ building on Jev.
 
 ## 2. Scope
 
-In: seven of the eight documented modes, two substrates, one model version.
+In: seven of the nine documented modes, two substrates, one model version.
 
 Out:
-- **Generation** (mode 8). Jev isn't trained to generate and the docs say so. Testing it
+- **Generation** (mode 9). Jev isn't trained to generate and the docs say so. Testing it
   would be theatre. Stated in the write-up rather than faked.
+- **Common-sense structural invariants** (mode 8), as an arm. It appeared on the page
+  between 2026-09-17 and 2026-09-20 without the model version changing, which is its own
+  finding (see the drift note in §6). It doesn't fit the one-variable-per-arm frame: the
+  page's claim is that separate questions don't stand in arithmetic relation to each
+  other, so there is no baseline to degrade from. It is also the cheapest of the nine to
+  measure — ask a judgment and its negation as separate Nouls, sum the probabilities,
+  report the distance from 1. The page's own example sums to 1.19. That belongs in the
+  write-up as a measured aside rather than a twelfth arm, and §5 records where it puts two
+  existing arms at risk.
 - **Comparisons against other models.** Four ecosystem repos already do Jev-vs-baseline.
   This measures Jev against its own documentation.
 - **Absolute capability claims.** "Jev is X% accurate at deletion debates" is not a result
@@ -100,7 +109,7 @@ about twenty years deep. Closed discussions are wrapped in a `xfd-closed` boiler
 
 The task is applying a written rule corpus (WP:N, WP:GNG, WP:NOT) to a messy human
 argument, which puts **literal reading** — instruction-following, not arithmetic — at the
-centre. That's the most interesting of the eight modes and the one every Jev integration is
+centre. That's the most interesting of the nine modes and the one every Jev integration is
 implicitly betting on.
 
 - `core`: nomination rationale, article summary, the policies actually cited
@@ -194,8 +203,17 @@ own arm takes the cross product from 11 to 12.
 
 Worth noting for the write-up: the remedy the page prescribes for this mode is "write precise
 prompts, and test edge cases before deploying", which is advice to test rather than a
-mitigation. It's the weakest of the eight, and this is the one arm measuring a failure its
+mitigation. It's the weakest of the nine, and this is the one arm measuring a failure its
 own documentation has no answer for.
+
+**Mode 8 puts two of these arms at risk, and the write-up says so.** The page states that
+"P(noul) and 1 - P(not noul) may not be directly comparable", with its own example summing
+to 1.19. The criteria arm inverts true/false polarity and the indirection arm routes the
+question through a double negative; both assume a complement behaves like a complement.
+Whatever they measure is the contradiction or indirection effect *plus* whatever structural
+non-invariance the model already carries. The invariance probe above is what separates them:
+run it on the same items, and its deviation from 1 is the floor those two arms have to clear,
+exactly as the placebo is the floor for the rest.
 
 **The placebo is the second noise floor.** Field ordering is a change the docs give no
 reason to care about. Every real effect must clear it. If shuffling moves results as much
@@ -249,6 +267,22 @@ result.
 
 **Run manifest** pins model version, SDK version, selection seed and git commit. The
 jaggedness page is versioned at `jev-1.13`; these results expire with it.
+
+**The transport decides whether the pin is real.** Four routes reach Jev and they don't
+agree on this. Vercel's AI Gateway exposes only `typesafe-ai/jev`, reports `modelId:
+"typesafe-ai/jev"` back, and 404s every versioned id — so a run there cannot say which Jev
+answered. It also refuses `providerOptions.typesafe.probabilityDecimals` as `unsupported`
+and holds probabilities at two decimals, which costs AUC resolution through ties.
+Cloudflare Workers AI returns `"model": "jev-1.13.0"` in the response. OpenRouter addresses
+it as `typesafe/jev-1.13`. The TypeSafe API takes a versioned id directly and is the only
+route documented to accept the precision options. Any route whose answers can't be
+attributed to a version is unusable for a study pinned to one.
+
+**Pin the page, not just the model.** On 2026-09-17 the page listed eight modes. On
+2026-09-20 it listed nine, with "Common-sense structural invariants" inserted at 8 and
+Generation moved to 9 — same model version, three days apart. The control condition is
+that page's advice, so a run has to archive the page and record the date it was read, or
+the baseline isn't reproducible. Versioning by model id alone would have missed this.
 
 **Budget.** Roughly 500 items x 11 arms x 3 repeats ~ 16k calls per substrate. Pinned as
 config. Jev is early access with no public pricing, so cost is an unknown to measure during
@@ -366,7 +400,10 @@ To be carried into the write-up, not buried:
 - Two substrates is suggestive of generality, not evidence of it.
 - AfD outcomes carry social dynamics alongside policy; mitigated, not eliminated.
 - OSV data is clean relative to real-world inputs, so measured degradation is a lower bound.
-- Results pin to `jev-1.13` and expire with it.
+- Results pin to `jev-1.13` and to the jaggedness page as read on a stated date. The page
+  moved once already at fixed model version.
+- Modes 8 and 9 are measured or excluded rather than run as arms, so the one-piece-at-a-time
+  design covers seven of nine, and the write-up says which.
 - Item selection is budget-limited; strata are balanced by design but not exhaustive.
 
 ## 12. Open questions
