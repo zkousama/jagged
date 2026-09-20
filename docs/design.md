@@ -267,18 +267,24 @@ result.
 **Run manifest** pins model version, SDK version, selection seed and git commit. The
 jaggedness page is versioned at `jev-1.13`; these results expire with it.
 
-**The transport decides whether the pin is real.** Four routes reach Jev and they don't
-agree on this. Vercel's AI Gateway exposes only `typesafe-ai/jev`, reports `modelId:
-"typesafe-ai/jev"` back, and 404s every versioned id — so a run there cannot say which Jev
-answered. It also refuses `providerOptions.typesafe.probabilityDecimals` as `unsupported`
-and holds probabilities at two decimals, which costs AUC resolution through ties.
-Cloudflare's own model page documents a response carrying `"model": "jev-1.13.0"`, which is
-enough to record what answered even if the request can't pin it; that is documented rather
-than measured here. The TypeSafe API takes a versioned id directly and is the only route
-documented to accept the precision options. OpenRouter carries no Jev entry — its public
-catalogue listed 446 models on 2026-09-20 and none of them was TypeSafe's, so a secondhand
-report of `typesafe/jev-1.13` there doesn't hold. Any route whose answers can't be
-attributed to a version is unusable for a study pinned to one.
+**The transport decides whether the pin is real.** Vercel's AI Gateway lists 376 models and
+exactly one TypeSafe entry, `typesafe-ai/jev`. Every versioned form of that id returns
+`Model not found`, and the response names no version either: 65 leaves of the result object
+carry `typesafe-ai/jev` or `typesafe-ai` and nothing more. A run there cannot say which Jev
+answered, which makes it unusable for a study pinned to one. Cloudflare's own model page
+documents a response carrying `"model": "jev-1.13.0"` — documented rather than measured
+here, and enough to record what answered even when the request can't pin it. The TypeSafe
+API takes a versioned id directly. OpenRouter carries no Jev entry at all; its public
+catalogue listed 446 models on 2026-09-20 and none of them was TypeSafe's.
+
+**Two decimals is the model, not the route.** Probabilities come back rounded to two places
+and `result.rounding` declares it, which leaves 101 distinct values and costs AUC resolution
+through ties. That is TypeSafe's behaviour rather than a gateway limitation: the AI SDK's
+TypeSafe provider defines no provider options at all, and any unknown key under
+`providerOptions.typesafe` returns the same `unsupported` warning — `probabilityDecimals`
+and `bananaDecimals` are indistinguishable to it. Nothing in the documented surface asks for
+more precision, so the pilot has to establish whether two decimals give usable intervals
+rather than assume a knob exists.
 
 **Pin the page, not just the model.** The page carries its own stamp — "Applies to
 `jev-1.13`. Last reviewed 2026-09-17" — and no changelog. The control condition is that
