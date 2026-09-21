@@ -47,3 +47,38 @@ What the 131 successful calls still establish:
 Still open: whether two-decimal probabilities give usable per-stratum intervals. The
 successful calls are 5 to 18 per arm, with 6 for baseline, too thin for paired deltas.
 That needs a complete run.
+
+## Attempt 2 — complete, and the task is too easy
+
+With pacing and 429/503 retry, 1,650 calls and 3,300 rows succeeded. 22 calls retried
+once; nothing reached the cap. The models page was unchanged before and after.
+
+**Precision is not the problem.** Paired-delta intervals are 0.00 to 0.09 wide, so
+two-decimal probabilities leave usable intervals. That question is answered.
+
+**The baseline is at the ceiling.** Verdict AUC 0.997 at 98% accuracy, window AUC
+1.000 at 100%. Every arm lands within about 0.01 of baseline except `adversarial`
+(−0.038, CI touching zero), and `dates` and `numbers` return intervals of exactly
+[0, 0]. A metric pinned at its maximum cannot show a degradation, so these are not
+measured nulls.
+
+**Cause: the votes are in the state.** The spec defines AfD `core` as the nomination
+rationale, article summary and cited policies. The adapter puts the whole discussion
+body into `core`, and that body carries the bolded votes. A sampled baseline row
+labelled `False` contained `'''Delete'''`, `'''keep'''` and `'''Keep'''`. The verdict
+task reduces to reading a tally, which is not what the study claims to measure.
+
+Moving the discussion into `context` would not fix it: the padding arms would then
+hand the votes back, and padding would appear to help. The votes have to leave the
+state entirely.
+
+The window question has a related limit. Items that closed far from the seven-day
+boundary are easy in either representation, so `dates` can only move on items near it.
+
+**Calibration still moved at baseline.** Verdict ECE 0.223 against 98% accuracy: the
+answers are right and the probabilities hedge, sitting near 0.76 for correct calls.
+
+Consequence: the adapter's `core` changes to match the spec before the main run, and
+this file records that change in a dated commit ahead of it, as the pre-registration
+allows. The attempt-2 data measures the defective state and is not the main run's
+baseline.
