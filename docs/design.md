@@ -111,13 +111,30 @@ argument, which puts **literal reading** — instruction-following, not arithmet
 centre. That's the most interesting of the nine modes and the one every Jev integration is
 implicitly betting on.
 
-- `core`: nomination rationale, article summary, the policies actually cited
-- `context`: boilerplate, signatures, thread furniture, procedural chatter
-- `numeric`: participation counts, source counts
+- `core`: the discussion with bolded votes and vote-only lines stripped. The
+  nomination sits in that thread; it is not a separate field.
+- `context`: boilerplate, signatures, thread furniture, procedural chatter,
+  with the same vote strip, so padding cannot restore the tally
+- `numeric`: participation counts, source counts. The participant count is
+  taken from the unstripped body.
 - `temporal`: the listing length, as two ISO dates or as the gap in words
 - `labels`: `verdict`, the closing decision (see the labelling choice below); and
   `window`, whether the close came before the seven-day listing period elapsed
 - `stratum`: participation volume and disagreement, banded
+
+**Ceiling, and why core is the stripped discussion.** Attempt 2 of the declared
+pilot (`data/pilot/manifest.md`) put the whole discussion in `core`, votes
+included. Baseline verdict AUC was 0.997 at 98% accuracy: the task was a tally.
+Moving the thread into `context` would hand those votes to the padding arms.
+The votes have to leave every field.
+
+The 50-item design-B check on the same date (same manifest) left the arguments
+in `core` and stripped the votes. Baseline accuracy was 0.940 and ECE 0.234;
+adversarial moved accuracy by −0.580 and ECE by +0.353, both clearing the
+placebo band. Ranking stayed at the ceiling, because the remaining arguments
+still determine the close. Accuracy at 0.5 and ECE are therefore the primaries
+on this substrate; AUC is computed and reported, and is not in the family the
+decision rule corrects.
 
 **Confound, and the labelling choice.** AfD outcomes partly reflect who showed up, not only
 the merits, so raw outcome prediction is partly social-dynamics prediction. Two candidate
@@ -345,9 +362,16 @@ replacement, recompute the metric in both arms on the resampled set, take the di
 Repeats average within item first.
 
 **Metrics per arm and question:**
-- AUC, primary. Noul returns a probability; thresholding discards information.
-- Accuracy at 0.5, because that's the documented cut and what people will ship.
-- Calibration: ECE plus reliability diagram.
+- Accuracy at 0.5 and ECE, co-primary. The documented cut, and the calibration
+  of the only number Jev returns. The decision rule and Benjamini-Hochberg
+  correction at q=0.05 run across the full family of non-baseline arms × both
+  primaries. The placebo band is metric-specific: an accuracy delta is judged
+  against the placebo accuracy interval, an ECE delta against the placebo ECE
+  interval.
+- AUC, computed and reported, not in that family. Attempt 2 of the declared
+  pilot (`data/pilot/manifest.md`) sat at verdict AUC 0.997 with the votes in
+  the state; the 50-item design-B check on the same date stayed at the ranking
+  ceiling after they left, because the discussion still determines the close.
 
 **Calibration is the most likely real finding.** A Noul returns no confidence value; the docs
 say plainly that "Noul does not return a separate confidence value", because the noul *is* the
@@ -361,8 +385,9 @@ visibly degrades, because every downstream confidence gate stops working with no
 looking wrong.
 
 **Decision rule, pre-registered.** An effect counts when its CI excludes zero, its magnitude
-clears the placebo arm's upper bound, it survives Benjamini-Hochberg at q=0.05 across the
-full family, and its direction holds across repeats. Everything else is reported as null.
+clears the placebo band on that metric, it survives Benjamini-Hochberg at q=0.05 across the
+family of arms × both primaries, and its direction holds across repeats. Everything else
+is reported as null.
 
 **Nulls get equal billing.** If padding costs nothing measurable, that piece of advice doesn't
 change the answer on this task, and the write-up reports it. Pre-committing to publish nulls
@@ -378,10 +403,11 @@ is not enough to call it general, and the write-up says so rather than letting r
 infer more.
 
 **Figures:**
-1. dAUC by stratum, one line per mode — the degradation curves
+1. dAccuracy by stratum, one line per mode — the degradation curves
 2. Reliability diagram, baseline against worst arm — the calibration result
 3. Dose-response for context padding at 25/50/100%
-4. Forest plot of every delta with CIs and the placebo band drawn in
+4. Forest plot of every primary delta (accuracy and ECE) with CIs and the
+   metric-specific placebo band drawn in
 
 Latency comes free and is worth reporting; speed is Jev's pitch and nobody has measured
 what padding costs in milliseconds. Token consumption comes free the same way, off the
