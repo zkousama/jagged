@@ -271,7 +271,15 @@ jaggedness page is versioned at `jev-1.13`; these results expire with it.
 exactly one TypeSafe entry, `typesafe-ai/jev`. Every versioned form of that id returns
 `Model not found`, and the response names no version either: 65 leaves of the result object
 carry `typesafe-ai/jev` or `typesafe-ai` and nothing more. A run there cannot say which Jev
-answered, which makes it unusable for a study pinned to one. Cloudflare's own model page
+answered from the payload alone.
+
+How much that costs depends on how many versions exist, and right now the answer is one.
+TypeSafe's models page lists `jev-1.13.0` as the only concrete version, with `jev-latest`
+and `jev-preview` both pointing at it and no preview build available. So a gateway run
+completed today is attributable by elimination rather than by record. The run manifest
+captures the models page as read before and after the run, and a run that straddles a
+version change is discarded. That is weaker than a version in the payload and strong
+enough to proceed on. Cloudflare's own model page
 documents a response carrying `"model": "jev-1.13.0"` — documented rather than measured
 here, and enough to record what answered even when the request can't pin it. The TypeSafe
 API takes a versioned id directly. OpenRouter carries no Jev entry at all; its public
