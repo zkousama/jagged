@@ -238,6 +238,17 @@ documented limit, so the arm most likely to fail is the one under measurement. D
 silently would make padding look free. Adapters cap context to stay under the limit and the
 runner records every truncation.
 
+429 and 503 are a different class. The gateway applies a sustained-rate limit (about 25
+successful calls a minute in the first pilot attempt), and those errors land on whichever
+arm comes next in the shuffled order, so they are infrastructure noise. They are retried
+with exponential backoff up to five times, and the row records how many retries it took.
+Other 4xx are never retried: a 400 from an oversized state is arm-dependent, `context_100`
+is the arm most likely to hit it, and that failure is part of the measurement. A call that
+exhausts the retry cap is still a row. Nothing is retried into silence.
+
+Calls are paced at 2.4 seconds (25 per minute) so most 429s never happen. Cached hits skip
+the wait; an interrupted run resumes.
+
 The limit is "64k tokens together for all `state` and `questions`; 32k tokens for the `state` +
 the longest `question`". It is not a ceiling on state alone, so the cap has to be computed
 against state plus the rendered question or the padding arm will fail at a threshold the
@@ -249,7 +260,7 @@ adapter thinks it's below.
 trial_id, substrate, item_id, stratum, arm, repeat, question,
 request_hash, request (verbatim), response (verbatim),
 probability, label, latency_ms, call_input_tokens, call_output_tokens,
-generation_id, error, model, httpx_version, gateway_protocol, evaluation_spec,
+generation_id, error, retries, model, httpx_version, gateway_protocol, evaluation_spec,
 run_id, git_commit, ts
 ```
 
