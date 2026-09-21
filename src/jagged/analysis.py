@@ -60,6 +60,11 @@ def paired_delta(trials, base_arm: str, arm: str, metric: str = "auc",
                    & {i for (a, i) in collapsed if a == arm})
     if stratum:
         items = [i for i in items if collapsed[(base_arm, i)]["stratum"] == stratum]
+    if not items:
+        raise ValueError(
+            f"paired_delta: no overlapping items for {base_arm!r} vs {arm!r} "
+            f"(question={question!r}, stratum={stratum!r})"
+        )
     fn = METRICS[metric]
 
     def score(sample, which):

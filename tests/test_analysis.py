@@ -64,6 +64,14 @@ def test_a_delta_ignores_rows_from_another_question():
     assert unscoped.point > scoped.point, "pooling questions hides the effect"
 
 
+def test_paired_delta_names_the_empty_filter():
+    rows = [_row("a", "baseline", 0, 0.9, True, question="verdict"),
+            _row("a", "placebo", 0, 0.8, True, question="verdict")]
+    with pytest.raises(ValueError, match=r"placebo.*question='window'.*stratum='contested'"):
+        paired_delta(rows, "baseline", "placebo", n_boot=10,
+                     question="window", stratum="contested")
+
+
 def test_benjamini_hochberg_rejects_only_small_pvalues():
     assert benjamini_hochberg([0.001, 0.04, 0.8], q=0.05) == [True, False, False]
 
