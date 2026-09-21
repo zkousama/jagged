@@ -78,7 +78,27 @@ boundary are easy in either representation, so `dates` can only move on items ne
 **Calibration still moved at baseline.** Verdict ECE 0.223 against 98% accuracy: the
 answers are right and the probabilities hedge, sitting near 0.76 for correct calls.
 
-Consequence: the adapter's `core` changes to match the spec before the main run, and
-this file records that change in a dated commit ahead of it, as the pre-registration
+Consequence: the adapter's `core` changes before the main run, and this file
+records that change in a dated commit ahead of it, as the pre-registration
 allows. The attempt-2 data measures the defective state and is not the main run's
 baseline.
+
+## Design B check: 50 items, same date
+
+A throwaway run on the same 50 items, one repeat, three arms: baseline,
+adversarial, placebo. Core was the discussion with bolded votes and vote-only lines stripped,
+and the same strip on context.
+
+- Baseline accuracy 0.940 (47 of 50), ECE 0.234. Three misses, so accuracy is
+  off the 1.000 ceiling that pinned AUC.
+- Accuracy, arm − baseline: placebo −0.040 [−0.100, +0.000]; adversarial
+  −0.580 [−0.740, −0.420]. The adversarial interval excludes zero and clears
+  the placebo band.
+- ECE, arm − baseline: placebo +0.004 [−0.047, +0.018]; adversarial +0.353
+  [+0.202, +0.471]. Same.
+
+Ranking stayed at the ceiling: the remaining arguments still determine the
+close. Accuracy at 0.5 and ECE become the co-primary metrics; AUC is computed
+and reported, and is not in the family the decision rule corrects. The FDR
+family is every non-baseline arm × both primaries. The adapter switches to this
+core.

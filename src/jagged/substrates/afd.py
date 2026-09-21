@@ -14,11 +14,29 @@ TS_RE = re.compile(r"(\d{1,2}):(\d{2}), (\d{1,2}) (\w+) (\d{4}) \(UTC\)")
 MONTHS = {m: i for i, m in enumerate(
     ["January", "February", "March", "April", "May", "June", "July",
      "August", "September", "October", "November", "December"], start=1)}
-NOM_RE = re.compile(r"(?is)\{\{la\|1=[^}]*\}\}\s*(?P<nom>.+?)(?=\n\*|\Z)")
+# Bolded AfD votes and vote-only bullets. Attempt 2 left these in core and the
+# verdict task collapsed to reading a tally (AUC 0.997). Padding would hand
+# them back if they sat in context, so the same strip runs on every field.
+BOLD_VOTE = re.compile(
+    r"'''[^']{0,120}?\b(?:keep|delete|redirect|merge|comment|relist|neutral)\b[^']{0,120}?'''",
+    re.I,
+)
+ONLY_VOTE = re.compile(
+    r"(?im)^\*+\s*(?:(?:weak|strong|speedy|snow)\s+)?(?:keep|delete|redirect|merge)\s*[.:]?\s*$",
+)
+EMPTY_BULLET = re.compile(r"(?m)^\*+\s*[:.\-–—]*\s*$")
 STATE_CAP = 8000  # characters; keeps state well inside the 32k token ceiling
 LISTING_PERIOD_DAYS = 7  # WP:AFD standard listing period
 NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven",
                 "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen"]
+
+
+def strip_votes(text: str) -> str:
+    """Remove bolded votes and vote-only lines; keep the surrounding argument."""
+    text = BOLD_VOTE.sub("", text)
+    text = ONLY_VOTE.sub("", text)
+    text = EMPTY_BULLET.sub("", text)
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
 
 
 def band_participants(n: int) -> str:
@@ -144,17 +162,20 @@ class AfdSubstrate:
             self.dropped["undated"] += 1
             return None
         length, gap = listing
-        nom_match = NOM_RE.search(body)
-        nomination = (nom_match.group("nom") if nom_match else body[:600]).strip()
+        # Count on the unstripped body: stripping the vote marker would drop
+        # the participant tally the numeric field is supposed to carry.
         participants = len(BULLET_RE.findall(body))
         signatures = " ".join(SIG_RE.findall(body))
+        discussion = strip_votes(body)
+        context = {
+            "signatures": signatures,
+            "procedural": "{{AFD help}} This debate is archived.",
+        }
 
         item = Item(
             id=f"afd:{title.removeprefix('Wikipedia:Articles for deletion/')}",
-            core={"nomination": nomination[:STATE_CAP],
-                  "discussion": body[:STATE_CAP]},
-            context={"signatures": signatures[:STATE_CAP],
-                     "procedural": "{{AFD help}} This debate is archived."},
+            core={"discussion": discussion[:STATE_CAP]},
+            context={k: strip_votes(v)[:STATE_CAP] for k, v in context.items()},
             numeric={"participants": Dual(raw=str(participants),
                                              banded=band_participants(participants))},
             temporal={"listing_length": length},

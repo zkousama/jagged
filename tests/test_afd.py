@@ -9,6 +9,7 @@ Nominating. No independent sources found. [[User:A|A]] 10:00, 1 March 2024 (UTC)
 *'''Delete''' agree with nom. [[User:B|B]] 11:00, 1 March 2024 (UTC)
 *'''Delete''' nothing in the usual databases. [[User:C|C]] 12:00, 1 March 2024 (UTC)
 *'''Delete''' searched, no coverage. [[User:D|D]] 13:00, 1 March 2024 (UTC)
+* Keep.
 {{Afd bottom}}"""
 
 
@@ -59,7 +60,8 @@ def test_load_builds_a_valid_labelled_item():
     item = items[0]
     validate_item(item)
     assert item.labels == {"verdict": True, "window": True}
-    assert "nomination" in item.core
+    assert "discussion" in item.core
+    assert "nomination" not in item.core
     assert "participants" in item.numeric
     assert item.numeric["participants"].raw == "3"
     assert item.numeric["participants"].banded == "a handful of editors"
@@ -75,6 +77,27 @@ def test_close_text_never_leaks_into_the_item():
     blob = " ".join([*item.core.values(), *item.context.values()]).lower()
     assert "the result was" not in blob
     assert "afd top" not in blob
+
+
+def test_vote_words_do_not_survive_in_any_field():
+    """Bolded votes and vote-only lines must leave core and context.
+
+    Attempt 2 put the whole discussion in core, tally included, and baseline
+    verdict AUC was 0.997. Padding would hand the votes back if they sat in
+    context, so they have to be absent from every field.
+    """
+    sub = AfdSubstrate(FakeWiki({"Wikipedia:Articles for deletion/Example Article": DISCUSSION}))
+    item = sub.load(budget=1)[0]
+    blob = "\n".join([*item.core.values(), *item.context.values(),
+                      *[d.raw for d in item.numeric.values()],
+                      *[d.banded for d in item.numeric.values()],
+                      *[d.raw for d in item.temporal.values()],
+                      *[d.banded for d in item.temporal.values()]])
+    assert "'''Delete'''" not in blob
+    assert "'''Keep'''" not in blob
+    assert "* Keep." not in blob
+    assert "agree with nom" in item.core["discussion"]
+    assert "nomination" not in item.core
 
 
 def test_non_binary_outcomes_are_dropped():
