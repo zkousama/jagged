@@ -32,10 +32,11 @@ def _cmd_analyze(args) -> int:
     print(f"{len(trials)} trials, {dropped} errored")
     arms = sorted({r["arm"] for r in trials} - {"baseline"})
     placebo = (paired_delta(trials, "baseline", "placebo",
-                            question=question_for("placebo"))
+                            question=question_for("placebo"), n_boot=args.n_boot)
                if "placebo" in arms else None)
     # Each arm is read on the question its manipulation reaches.
-    deltas = {a: paired_delta(trials, "baseline", a, question=question_for(a))
+    deltas = {a: paired_delta(trials, "baseline", a, question=question_for(a),
+                              n_boot=args.n_boot)
               for a in arms}
     # CI-derived p-value stand-in: arms whose interval excludes zero are candidates
     pvals = [0.001 if (d.lo > 0 or d.hi < 0) else 0.5 for d in deltas.values()]
@@ -67,6 +68,7 @@ def main(argv=None) -> int:
     a = subs.add_parser("analyze")
     a.add_argument("--trials", default="data/trials/afd.jsonl")
     a.add_argument("--out", default="figures")
+    a.add_argument("--n-boot", type=int, default=2000)
     a.set_defaults(fn=_cmd_analyze)
 
     # argparse exits the process on a bad command line. A main() that returns

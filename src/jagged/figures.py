@@ -28,19 +28,21 @@ def _save(fig, out) -> Path:
     return out
 
 
-def degradation_curves(trials_path, out) -> Path:
+def degradation_curves(trials_path, out, n_boot: int = 2000) -> Path:
     trials, _ = load_trials(trials_path)
     present = [s for s in STRATA if any(r["stratum"] == s for r in trials)]
     arms = sorted({r["arm"] for r in trials} - {"baseline", "placebo"})
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
     if "placebo" in {r["arm"] for r in trials}:
-        band = [paired_delta(trials, "baseline", "placebo", stratum=s) for s in present]
+        band = [paired_delta(trials, "baseline", "placebo", stratum=s, n_boot=n_boot)
+                for s in present]
         ax.fill_between(range(len(present)),
                         [d.lo for d in band], [d.hi for d in band],
                         alpha=0.15, color=PALETTE[0], label="placebo band", zorder=1)
     for i, arm in enumerate(arms):
-        pts = [paired_delta(trials, "baseline", arm, stratum=s) for s in present]
+        pts = [paired_delta(trials, "baseline", arm, stratum=s, n_boot=n_boot)
+               for s in present]
         ax.plot(range(len(present)), [d.point for d in pts], marker="o",
                 color=PALETTE[i % len(PALETTE)], label=arm, zorder=3)
     ax.axhline(0, linewidth=1, color="#333", zorder=2)

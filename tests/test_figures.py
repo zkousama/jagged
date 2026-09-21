@@ -21,7 +21,7 @@ def _rows(tmp_path):
 
 
 def test_degradation_curves_writes_a_png(tmp_path):
-    out = degradation_curves(_rows(tmp_path), tmp_path / "fig1.png")
+    out = degradation_curves(_rows(tmp_path), tmp_path / "fig1.png", n_boot=200)
     assert out.exists() and out.stat().st_size > 1000
 
 

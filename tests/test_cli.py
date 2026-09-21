@@ -16,7 +16,8 @@ def test_analyze_runs_without_api_access(tmp_path, capsys):
                          "question": "verdict", "error": None})
     trials = tmp_path / "trials.jsonl"
     trials.write_text("\n".join(json.dumps(r) for r in rows))
-    code = main(["analyze", "--trials", str(trials), "--out", str(tmp_path / "figs")])
+    code = main(["analyze", "--trials", str(trials), "--out", str(tmp_path / "figs"),
+                 "--n-boot", "200"])
     assert code == 0
     assert "placebo" in capsys.readouterr().out
 
