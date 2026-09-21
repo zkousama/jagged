@@ -19,7 +19,12 @@ def test_analyze_runs_without_api_access(tmp_path, capsys):
     code = main(["analyze", "--trials", str(trials), "--out", str(tmp_path / "figs"),
                  "--n-boot", "200"])
     assert code == 0
-    assert "placebo" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "placebo" in out
+    assert "accuracy" in out
+    assert "ece" in out
+    assert "auc" in out
+    assert "secondary" in out
 
 
 def test_unknown_command_returns_nonzero(capsys):

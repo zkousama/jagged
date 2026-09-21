@@ -2,8 +2,8 @@ import argparse
 import sys
 from pathlib import Path
 
-from jagged.analysis import (benjamini_hochberg, load_trials, paired_delta,
-                             question_for, verdict)
+from jagged.analysis import (SECONDARY_METRIC, benjamini_hochberg, family_deltas,
+                             load_trials, paired_delta, question_for, verdict)
 from jagged.conditions import ARM_NAMES
 
 
@@ -30,21 +30,22 @@ def _cmd_run(args) -> int:
 def _cmd_analyze(args) -> int:
     trials, dropped = load_trials(args.trials)
     print(f"{len(trials)} trials, {dropped} errored")
-    arms = sorted({r["arm"] for r in trials} - {"baseline"})
-    placebo = (paired_delta(trials, "baseline", "placebo",
-                            question=question_for("placebo"), n_boot=args.n_boot)
-               if "placebo" in arms else None)
-    # Each arm is read on the question its manipulation reaches.
-    deltas = {a: paired_delta(trials, "baseline", a, question=question_for(a),
-                              n_boot=args.n_boot)
-              for a in arms}
-    # CI-derived p-value stand-in: arms whose interval excludes zero are candidates
-    pvals = [0.001 if (d.lo > 0 or d.hi < 0) else 0.5 for d in deltas.values()]
+    family = family_deltas(trials, n_boot=args.n_boot)
+    arms = sorted({arm for arm, _ in family})
+    pvals = [0.001 if (d.lo > 0 or d.hi < 0) else 0.5 for d in family.values()]
     survived = benjamini_hochberg(pvals, q=0.05)
-    for (arm, d), ok in zip(deltas.items(), survived):
-        tag = verdict(d, placebo, ok) if placebo else "n/a"
-        print(f"{arm:14} [{question_for(arm):7}] dAUC {d.point:+.3f} "
+    for (key, d), ok in zip(family.items(), survived):
+        arm, metric = key
+        placebo = family.get(("placebo", metric))
+        tag = verdict(d, placebo, ok) if placebo is not None else "n/a"
+        print(f"{arm:14} [{question_for(arm):7}] {metric:8} {d.point:+.3f} "
               f"[{d.lo:+.3f}, {d.hi:+.3f}]  {tag}")
+    print("secondary (not in the FDR family)")
+    for arm in arms:
+        d = paired_delta(trials, "baseline", arm, metric=SECONDARY_METRIC,
+                         question=question_for(arm), n_boot=args.n_boot)
+        print(f"{arm:14} [{question_for(arm):7}] {SECONDARY_METRIC:8} {d.point:+.3f} "
+              f"[{d.lo:+.3f}, {d.hi:+.3f}]")
     Path(args.out).mkdir(parents=True, exist_ok=True)
     return 0
 

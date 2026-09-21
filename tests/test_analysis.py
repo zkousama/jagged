@@ -1,8 +1,9 @@
 import json
 
 import pytest
-from jagged.analysis import (Delta, benjamini_hochberg, collapse_repeats,
-                             load_trials, paired_delta, verdict)
+from jagged.analysis import (PRIMARY_METRICS, Delta, benjamini_hochberg,
+                             collapse_repeats, family_deltas, load_trials,
+                             paired_delta, verdict)
 
 
 def _row(item, arm, repeat, p, label, stratum="thin_unanimous", question="verdict"):
@@ -74,6 +75,24 @@ def test_paired_delta_names_the_empty_filter():
 
 def test_benjamini_hochberg_rejects_only_small_pvalues():
     assert benjamini_hochberg([0.001, 0.04, 0.8], q=0.05) == [True, False, False]
+
+
+def test_family_deltas_is_arms_times_both_primaries():
+    """The FDR family is every non-baseline arm × accuracy and ECE, not AUC."""
+    rows = []
+    for i in range(40):
+        lab = i % 2 == 0
+        ok, bad = (0.9 if lab else 0.1), 0.5
+        rows += [_row(f"i{i}", "baseline", 0, ok, lab),
+                 _row(f"i{i}", "broken", 0, bad, lab),
+                 _row(f"i{i}", "placebo", 0, ok, lab)]
+    family = family_deltas(rows, n_boot=50, seed=1)
+    assert PRIMARY_METRICS == ("accuracy", "ece")
+    assert set(family) == {
+        ("broken", "accuracy"), ("broken", "ece"),
+        ("placebo", "accuracy"), ("placebo", "ece"),
+    }
+    assert all(m != "auc" for _, m in family)
 
 
 def test_verdict_requires_clearing_zero_and_the_placebo():

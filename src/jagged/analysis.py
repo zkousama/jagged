@@ -15,6 +15,13 @@ METRICS = {"auc": auc, "accuracy": accuracy_at, "ece": ece}
 PRIMARY_QUESTION = {"dates": "window"}
 DEFAULT_QUESTION = "verdict"
 
+# Co-primary after the declared pilot. Attempt 2 sat at verdict AUC 0.997 because
+# the votes were in the state; design B still ranks at the ceiling, so AUC cannot
+# show a degradation. Accuracy at 0.5 and ECE still moved. AUC stays computed and
+# reported, and is not in the family Benjamini-Hochberg corrects.
+PRIMARY_METRICS = ("accuracy", "ece")
+SECONDARY_METRIC = "auc"
+
 
 def question_for(arm: str) -> str:
     return PRIMARY_QUESTION.get(arm, DEFAULT_QUESTION)
@@ -83,6 +90,23 @@ def paired_delta(trials, base_arm: str, arm: str, metric: str = "auc",
             draws.append(d)
     lo, hi = np.percentile(draws, [2.5, 97.5]) if draws else (float("nan"),) * 2
     return Delta(point=float(point), lo=float(lo), hi=float(hi))
+
+
+def family_deltas(trials, n_boot: int = 2000, seed: int = 1) -> dict[tuple[str, str], Delta]:
+    """Paired deltas for every non-baseline arm × both primary metrics.
+
+    That product is the family Benjamini-Hochberg corrects. Placebo lives in it
+    so its interval is the noise floor on the same metric the arm is judged on.
+    """
+    arms = sorted({r["arm"] for r in trials} - {"baseline"})
+    out: dict[tuple[str, str], Delta] = {}
+    for arm in arms:
+        question = question_for(arm)
+        for metric in PRIMARY_METRICS:
+            out[(arm, metric)] = paired_delta(
+                trials, "baseline", arm, metric=metric, n_boot=n_boot,
+                seed=seed, question=question)
+    return out
 
 
 def benjamini_hochberg(pvalues: list[float], q: float = 0.05) -> list[bool]:
