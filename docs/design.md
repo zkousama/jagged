@@ -248,30 +248,38 @@ adapter thinks it's below.
 ```
 trial_id, substrate, item_id, stratum, arm, repeat, question,
 request_hash, request (verbatim), response (verbatim),
-probability, label, latency_ms, call_input_tokens, call_output_tokens, error,
-model, sdk_version, run_id, git_commit, ts
+probability, label, latency_ms, call_input_tokens, call_output_tokens,
+generation_id, error, model, sdk_version, run_id, git_commit, ts
 ```
 
 Verbatim request and response are what make "recompute my numbers without an API key" true.
 
 `call_*` rather than plain `input_tokens`: usage is billed per call, and one call carries
 every question asked against that state. The prefix is there so nobody sums the column
-across rows and doubles the bill.
+across rows and doubles the bill. `generation_id` is Vercel's `providerMetadata.gateway.generationId`,
+the handle into their log for the same call.
 
-**Set the timeout explicitly.** The SDK defaults to 10 seconds. The padding arms send the
-largest states in the study by construction, so the default would cut them off more often
-than any other arm — and a completion-rate gap that tracks state size is indistinguishable
-from the effect mode 5 is trying to measure. An unset default would have manufactured the
-result.
+**Set the timeout explicitly.** The client is httpx, which times out at five seconds unless
+you pass one. The padding arms send the largest states in the study by construction, so
+that default would cut them off more often than any other arm, and a completion-rate gap
+that tracks state size is indistinguishable from the effect mode 5 is trying to measure.
+An unset default would have manufactured the result.
 
 **Run manifest** pins model version, SDK version, selection seed and git commit. The
 jaggedness page is versioned at `jev-1.13`; these results expire with it.
 
-**The transport decides whether the pin is real.** Vercel's AI Gateway lists 376 models and
-exactly one TypeSafe entry, `typesafe-ai/jev`. Every versioned form of that id returns
-`Model not found`, and the response names no version either: 65 leaves of the result object
-carry `typesafe-ai/jev` or `typesafe-ai` and nothing more. A run there cannot say which Jev
-answered from the payload alone.
+**The transport is Vercel's AI Gateway, over plain HTTP.** There is no TypeSafe key in this
+environment, and the Python SDK will not start without one. The client is httpx against
+`POST https://ai-gateway.vercel.sh/v4/ai/evaluation-model`, with
+`ai-gateway-protocol-version: 0.0.1`, `ai-evaluation-model-specification-version: 4` and
+`ai-model-id: typesafe-ai/jev`. A question on the wire is
+`{"type": "boolean", "instructions": ..., "criteria": {"true": ..., "false": ...}}`.
+`QuestionSpec.to_noul()` builds that dict.
+
+The payload still cannot name a Jev version. The gateway lists 376 models and exactly one
+TypeSafe entry, `typesafe-ai/jev`. Every versioned form of that id returns `Model not found`,
+and the response names no version either: 65 leaves of the result object carry
+`typesafe-ai/jev` or `typesafe-ai` and nothing more.
 
 How much that costs depends on how many versions exist, and right now the answer is one.
 TypeSafe's models page lists `jev-1.13.0` as the only concrete version, with `jev-latest`
@@ -285,10 +293,15 @@ here, and enough to record what answered even when the request can't pin it. The
 API takes a versioned id directly. OpenRouter carries no Jev entry at all; its public
 catalogue listed 446 models on 2026-09-20 and none of them was TypeSafe's.
 
+The response body carries `answers.<name>.probability`, `rounding.probabilityDecimals`,
+`usage.inputTokens` and `usage.outputTokens`, and `providerMetadata.gateway.generationId`
+plus `marketCost`. Token fields are camelCase on the wire; the trial row keeps the
+`call_*` names. The generation id is stored next to them.
+
 **Two decimals is the model, not the route.** Probabilities come back rounded to two places
-and `result.rounding` declares it, which leaves 101 distinct values and costs AUC resolution
-through ties. That is TypeSafe's behaviour rather than a gateway limitation: the AI SDK's
-TypeSafe provider defines no provider options at all, and any unknown key under
+and `rounding.probabilityDecimals` declares it, which leaves 101 distinct values and costs
+AUC resolution through ties. That is TypeSafe's behaviour rather than a gateway limitation:
+the AI SDK's TypeSafe provider defines no provider options at all, and any unknown key under
 `providerOptions.typesafe` returns the same `unsupported` warning — `probabilityDecimals`
 and `bananaDecimals` are indistinguishable to it. Nothing in the documented surface asks for
 more precision, so the pilot has to establish whether two decimals give usable intervals
@@ -302,8 +315,8 @@ would otherwise change the baseline with nothing in the results to show it.
 
 **Budget.** Roughly 500 items x 11 arms x 3 repeats ~ 16k calls per substrate. Pinned as
 config. Jev is early access with no public pricing, so cost is an unknown to measure during
-the pilot rather than estimate now — though the response carries `input_tokens` and
-`output_tokens`, so the pilot measures consumption exactly and only the price stays
+the pilot rather than estimate now — though the response carries `inputTokens` and
+`outputTokens`, so the pilot measures consumption exactly and only the price stays
 unknown.
 
 ## 7. Analysis
