@@ -4,8 +4,7 @@ from jagged.question import QuestionSpec
 def test_to_noul_carries_instructions_only_when_criteria_absent():
     spec = QuestionSpec(instructions="Was this article deleted?")
     noul = spec.to_noul()
-    assert noul.instructions == "Was this article deleted?"
-    assert getattr(noul, "criteria", None) is None
+    assert noul == {"type": "boolean", "instructions": "Was this article deleted?"}
 
 
 def test_boundary_lands_in_the_false_criterion():
@@ -35,8 +34,12 @@ def test_to_noul_carries_criteria_when_present():
         criteria={"true": "The closer removed the article.", "false": "The article was retained."},
     )
     noul = spec.to_noul()
-    assert noul.criteria == {"true": "The closer removed the article.",
-                             "false": "The article was retained."}
+    assert noul == {
+        "type": "boolean",
+        "instructions": "Was this article deleted?",
+        "criteria": {"true": "The closer removed the article.",
+                     "false": "The article was retained."},
+    }
 
 
 def test_specs_compare_structurally():

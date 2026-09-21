@@ -1,5 +1,4 @@
 from msgspec import Struct
-from typesafe_sdk import Noul
 
 
 class QuestionSpec(Struct, frozen=True):
@@ -33,8 +32,10 @@ class QuestionSpec(Struct, frozen=True):
             merged[self.boundary_key] = f"{existing} {self.boundary}".strip()
         return merged
 
-    def to_noul(self) -> Noul:
+    def to_noul(self) -> dict:
+        """The question object the gateway accepts, not an SDK Noul."""
+        payload = {"type": "boolean", "instructions": self.instructions}
         criteria = self.rendered_criteria
-        if criteria is None:
-            return Noul(instructions=self.instructions)
-        return Noul(instructions=self.instructions, criteria=criteria)
+        if criteria is not None:
+            payload["criteria"] = criteria
+        return payload
