@@ -1,6 +1,8 @@
 import json
 
-from jagged.client import FakeJev
+import httpx
+
+from jagged.client import Answer, FakeJev
 from jagged.conditions import ARM_NAMES
 from jagged.items import Item, Dual
 from jagged.question import QuestionSpec
@@ -59,7 +61,7 @@ def test_run_writes_one_row_per_question_with_verbatim_payloads(tmp_path):
     items = _items(2)
     jev = FakeJev([0.1, 0.9, 0.2, 0.8])
     out = run(items, SPECS, ["baseline", "numbers"], repeats=1, client=jev,
-              out_path=tmp_path / "t.jsonl", cache=tmp_path / "cache", seed=1)
+              out_path=tmp_path / "t.jsonl", cache=tmp_path / "cache", seed=1, pace=0)
     rows = [json.loads(l) for l in out.read_text().splitlines()]
     assert len(rows) == 4
     assert {r["arm"] for r in rows} == {"baseline", "numbers"}
@@ -77,7 +79,7 @@ def test_every_question_gets_its_own_row_from_one_call(tmp_path):
                   stratum="thin_unanimous")]
     jev = FakeJev([0.7, 0.2])
     out = run(items, specs, ["baseline"], repeats=1, client=jev,
-              out_path=tmp_path / "t.jsonl", cache=tmp_path / "cache", seed=1)
+              out_path=tmp_path / "t.jsonl", cache=tmp_path / "cache", seed=1, pace=0)
     rows = [json.loads(l) for l in out.read_text().splitlines()]
     assert len(rows) == 2
     assert len(jev.requests) == 1, "both questions ride on one call"
@@ -92,7 +94,7 @@ def test_repeats_are_not_collapsed_by_the_cache(tmp_path):
     items = _items(1)
     jev = FakeJev([0.4, 0.6])
     out = run(items, SPECS, ["baseline"], repeats=2, client=jev,
-              out_path=tmp_path / "t.jsonl", cache=tmp_path / "cache", seed=1)
+              out_path=tmp_path / "t.jsonl", cache=tmp_path / "cache", seed=1, pace=0)
     probs = [json.loads(l)["probability"] for l in out.read_text().splitlines()]
     assert sorted(probs) == [0.4, 0.6], "each repeat must hit the API separately"
 
@@ -102,7 +104,7 @@ def test_failures_are_recorded_as_rows(tmp_path):
         def ask(self, state, specs): raise RuntimeError("429 rate limited")
         def close(self): pass
     out = run(_items(1), SPECS, ["baseline"], repeats=1, client=Boom(),
-              out_path=tmp_path / "t.jsonl", cache=tmp_path / "cache", seed=1)
+              out_path=tmp_path / "t.jsonl", cache=tmp_path / "cache", seed=1, pace=0)
     row = json.loads(out.read_text().splitlines()[0])
     assert row["probability"] is None
     assert "429" in row["error"]
@@ -122,7 +124,7 @@ def test_generation_id_comes_off_the_gateway_metadata(tmp_path):
             pass
 
     out = run(_items(1), SPECS, ["baseline"], repeats=1, client=OneShot(),
-              out_path=tmp_path / "t.jsonl", cache=tmp_path / "cache", seed=1)
+              out_path=tmp_path / "t.jsonl", cache=tmp_path / "cache", seed=1, pace=0)
     row = json.loads(out.read_text().splitlines()[0])
     assert row["generation_id"] == "gen_abc"
 
@@ -133,9 +135,97 @@ def test_row_records_the_transport_not_an_unused_sdk(tmp_path):
 
     jev = FakeJev([0.4])
     out = run(_items(1), SPECS, ["baseline"], repeats=1, client=jev,
-              out_path=tmp_path / "t.jsonl", cache=tmp_path / "cache", seed=1)
+              out_path=tmp_path / "t.jsonl", cache=tmp_path / "cache", seed=1, pace=0)
     row = json.loads(out.read_text().splitlines()[0])
     assert row["httpx_version"] == version("httpx")
     assert row["gateway_protocol"] == GATEWAY_PROTOCOL == "0.0.1"
     assert row["evaluation_spec"] == EVALUATION_SPEC == "4"
     assert "sdk_version" not in row
+
+
+def _http_error(status: int) -> httpx.HTTPStatusError:
+    request = httpx.Request("POST", "https://example.test/eval")
+    response = httpx.Response(status, request=request)
+    return httpx.HTTPStatusError(
+        f"{status} {response.reason_phrase}", request=request, response=response,
+    )
+
+
+class ScriptedStatus:
+    """Fake client: a script of HTTP statuses. 200 yields an Answer; anything else raises."""
+
+    def __init__(self, statuses: list[int], probability: float = 0.5):
+        self.statuses = list(statuses)
+        self.probability = probability
+        self.calls = 0
+
+    def ask(self, state, specs):
+        self.calls += 1
+        status = self.statuses.pop(0)
+        if status == 200:
+            return {name: Answer(probability=self.probability, raw={"ok": True},
+                                 latency_ms=1, call_input_tokens=1,
+                                 call_output_tokens=1)
+                    for name in specs}
+        raise _http_error(status)
+
+    def close(self):
+        pass
+
+
+def test_429_and_503_are_retried(tmp_path):
+    for status in (429, 503):
+        sleeps = []
+        client = ScriptedStatus([status, 200])
+        out = run(_items(1), SPECS, ["baseline"], repeats=1, client=client,
+                  out_path=tmp_path / f"{status}.jsonl", cache=tmp_path / f"c{status}",
+                  seed=1, pace=0, sleeper=sleeps.append)
+        row = json.loads(out.read_text().splitlines()[0])
+        assert client.calls == 2
+        assert row["retries"] == 1
+        assert row["error"] is None
+        assert row["probability"] == 0.5
+        assert sleeps == [4.8]
+
+
+def test_other_4xx_are_not_retried(tmp_path):
+    client = ScriptedStatus([400])
+    out = run(_items(1), SPECS, ["baseline"], repeats=1, client=client,
+              out_path=tmp_path / "t.jsonl", cache=tmp_path / "cache",
+              seed=1, pace=0, sleeper=lambda _: None)
+    row = json.loads(out.read_text().splitlines()[0])
+    assert client.calls == 1
+    assert row["retries"] == 0
+    assert row["probability"] is None
+    assert "400" in row["error"]
+
+
+def test_retry_cap_writes_an_error_row(tmp_path):
+    client = ScriptedStatus([429, 429, 429, 429])
+    out = run(_items(1), SPECS, ["baseline"], repeats=1, client=client,
+              out_path=tmp_path / "t.jsonl", cache=tmp_path / "cache",
+              seed=1, pace=0, max_retries=3, sleeper=lambda _: None)
+    row = json.loads(out.read_text().splitlines()[0])
+    assert client.calls == 4
+    assert row["retries"] == 3
+    assert row["probability"] is None
+    assert "429" in row["error"]
+
+
+def test_calls_are_paced(tmp_path):
+    clock = {"t": 0.0}
+    sleeps = []
+
+    def now():
+        return clock["t"]
+
+    def sleeper(seconds):
+        sleeps.append(seconds)
+        clock["t"] += seconds
+
+    client = ScriptedStatus([200, 200])
+    run(_items(2), SPECS, ["baseline"], repeats=1, client=client,
+        out_path=tmp_path / "t.jsonl", cache=tmp_path / "cache",
+        seed=1, pace=2.4, sleeper=sleeper, clock=now)
+    assert client.calls == 2
+    assert sleeps == [2.4]

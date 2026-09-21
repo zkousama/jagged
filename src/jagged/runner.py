@@ -32,6 +32,7 @@ class Trial(Struct):
     call_output_tokens: int | None
     generation_id: str | None
     error: str | None
+    retries: int
     model: str
     httpx_version: str
     gateway_protocol: str
@@ -39,6 +40,20 @@ class Trial(Struct):
     run_id: str
     git_commit: str
     ts: float
+
+
+PACE_INTERVAL = 2.4
+MAX_RETRIES = 5
+RETRYABLE = frozenset({429, 503})
+
+
+def backoff_seconds(attempt: int) -> float:
+    return PACE_INTERVAL * (2 ** attempt)
+
+
+def _status_code(exc: BaseException) -> int | None:
+    response = getattr(exc, "response", None)
+    return getattr(response, "status_code", None)
 
 
 def request_hash(state: dict, specs: dict[str, QuestionSpec]) -> str:
@@ -87,13 +102,16 @@ def _git_commit() -> str:
 
 
 def run(items, specs, arms, repeats, client, out_path: Path, cache: Path,
-        seed: int = 1, model: str = "jev-1.13", substrate: str = "afd") -> Path:
+        seed: int = 1, model: str = "jev-1.13", substrate: str = "afd",
+        pace: float = PACE_INTERVAL, max_retries: int = MAX_RETRIES,
+        sleeper=time.sleep, clock=time.monotonic) -> Path:
     out_path, cache = Path(out_path), Path(cache)
     cache.mkdir(parents=True, exist_ok=True)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     by_id = {i.id: i for i in items}
     run_id = f"{int(time.time())}-{seed}"
     commit = _git_commit()
+    last_request = None
 
     with out_path.open("w", encoding="utf-8") as fh:
         for item_id, arm, repeat in plan_trials(items, arms, repeats, seed):
@@ -103,19 +121,33 @@ def run(items, specs, arms, repeats, client, out_path: Path, cache: Path,
             # repeat index in the key: identical requests must still hit the API
             cache_file = cache / f"{rhash}-{repeat}.json"
 
-            answers, error = {}, None
+            answers, error, retries = {}, None, 0
             if cache_file.exists():
                 answers = json.loads(cache_file.read_text())["answers"]
             else:
-                try:
-                    got = client.ask(state, rendered)
-                    answers = {n: {"p": a.probability, "r": a.raw, "ms": a.latency_ms,
-                                   "in": a.call_input_tokens,
-                                   "out": a.call_output_tokens}
-                               for n, a in got.items()}
-                    cache_file.write_text(json.dumps({"answers": answers}))
-                except Exception as exc:
-                    error = f"{type(exc).__name__}: {exc}"
+                while True:
+                    if last_request is not None and pace > 0:
+                        wait = pace - (clock() - last_request)
+                        if wait > 0:
+                            sleeper(wait)
+                    last_request = clock()
+                    try:
+                        got = client.ask(state, rendered)
+                        answers = {n: {"p": a.probability, "r": a.raw, "ms": a.latency_ms,
+                                       "in": a.call_input_tokens,
+                                       "out": a.call_output_tokens}
+                                   for n, a in got.items()}
+                        cache_file.write_text(json.dumps({"answers": answers}))
+                        error = None
+                        break
+                    except Exception as exc:
+                        status = _status_code(exc)
+                        if status in RETRYABLE and retries < max_retries:
+                            retries += 1
+                            sleeper(backoff_seconds(retries))
+                            continue
+                        error = f"{type(exc).__name__}: {exc}"
+                        break
 
             # One call, one row per question. A failed call writes a row per
             # question too, so completion rate stays comparable across arms.
@@ -134,7 +166,7 @@ def run(items, specs, arms, repeats, client, out_path: Path, cache: Path,
                     call_input_tokens=blob.get("in") if blob else None,
                     call_output_tokens=blob.get("out") if blob else None,
                     generation_id=_generation_id(blob.get("r") if blob else None),
-                    error=error, model=model,
+                    error=error, retries=retries, model=model,
                     httpx_version=_httpx_version(),
                     gateway_protocol=GATEWAY_PROTOCOL,
                     evaluation_spec=EVALUATION_SPEC,
