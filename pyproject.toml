@@ -3,7 +3,6 @@ name = "jagged"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-    "typesafe-sdk",
     "httpx>=0.27",
     "msgspec>=0.18",
     "numpy>=2.0",

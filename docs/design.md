@@ -249,7 +249,8 @@ adapter thinks it's below.
 trial_id, substrate, item_id, stratum, arm, repeat, question,
 request_hash, request (verbatim), response (verbatim),
 probability, label, latency_ms, call_input_tokens, call_output_tokens,
-generation_id, error, model, sdk_version, run_id, git_commit, ts
+generation_id, error, model, httpx_version, gateway_protocol, evaluation_spec,
+run_id, git_commit, ts
 ```
 
 Verbatim request and response are what make "recompute my numbers without an API key" true.
@@ -259,14 +260,21 @@ every question asked against that state. The prefix is there so nobody sums the 
 across rows and doubles the bill. `generation_id` is Vercel's `providerMetadata.gateway.generationId`,
 the handle into their log for the same call.
 
+`httpx_version`, `gateway_protocol` and `evaluation_spec` replace `sdk_version`. The
+client is httpx against the gateway, so the row records the httpx version that made
+the request and the two header values that defined the wire (`ai-gateway-protocol-version`
+0.0.1, `ai-evaluation-model-specification-version` 4). A typesafe-sdk version would name
+a library that never saw the call.
+
 **Set the timeout explicitly.** The client is httpx, which times out at five seconds unless
 you pass one. The padding arms send the largest states in the study by construction, so
 that default would cut them off more often than any other arm, and a completion-rate gap
 that tracks state size is indistinguishable from the effect mode 5 is trying to measure.
 An unset default would have manufactured the result.
 
-**Run manifest** pins model version, SDK version, selection seed and git commit. The
-jaggedness page is versioned at `jev-1.13`; these results expire with it.
+**Run manifest** pins model version, httpx version, gateway protocol, evaluation spec,
+selection seed and git commit. The jaggedness page is versioned at `jev-1.13`; these
+results expire with it.
 
 **The transport is Vercel's AI Gateway, over plain HTTP.** There is no TypeSafe key in this
 environment, and the Python SDK will not start without one. The client is httpx against

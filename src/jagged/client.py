@@ -11,6 +11,8 @@ from jagged.question import QuestionSpec
 REQUEST_TIMEOUT = 120.0
 GATEWAY_URL = "https://ai-gateway.vercel.sh/v4/ai/evaluation-model"
 GATEWAY_MODEL = "typesafe-ai/jev"
+GATEWAY_PROTOCOL = "0.0.1"
+EVALUATION_SPEC = "4"
 
 
 class Answer(Struct, frozen=True):
@@ -48,8 +50,8 @@ class JevClient:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "ai-gateway-protocol-version": "0.0.1",
-            "ai-evaluation-model-specification-version": "4",
+            "ai-gateway-protocol-version": GATEWAY_PROTOCOL,
+            "ai-evaluation-model-specification-version": EVALUATION_SPEC,
             "ai-model-id": GATEWAY_MODEL,
         }
         started = time.perf_counter()
