@@ -35,19 +35,18 @@ class Delta(Struct, frozen=True):
 
 
 def bootstrap_pvalue(point: float, draws, n_boot: int) -> float:
-    """Two-sided bootstrap p-value: twice the far-side share, floored at 1/(n_boot+1).
+    """Two-sided bootstrap p-value with ties counted on both sides of zero.
 
-    The far side is the side of zero opposite the point estimate. A stand-in of
-    0.001-or-0.5 cannot feed Benjamini-Hochberg; this is the p-value the
-    registration's q = 0.05 correction actually needs.
+    `2 * min(# ≤ 0, # ≥ 0) / n`, floored at 1/(n_boot+1). The point estimate
+    is unused: an all-zero draw must not look maximally significant, which is
+    what counting the far side of the point did on two-decimal deltas.
     """
     if not draws:
         return 1.0
-    if point >= 0:
-        far = sum(1 for d in draws if d < 0)
-    else:
-        far = sum(1 for d in draws if d > 0)
-    return min(1.0, max(1 / (n_boot + 1), 2 * far / len(draws)))
+    at_or_below = sum(1 for d in draws if d <= 0)
+    at_or_above = sum(1 for d in draws if d >= 0)
+    p = 2 * min(at_or_below, at_or_above) / len(draws)
+    return min(1.0, max(1 / (n_boot + 1), p))
 
 
 def load_trials(path) -> tuple[list[dict], int]:

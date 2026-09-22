@@ -89,6 +89,25 @@ def test_bootstrap_pvalue_is_twice_the_far_side_share():
     assert bootstrap_pvalue(-0.1, draws, n_boot=100) == pytest.approx(0.20)
 
 
+def test_bootstrap_pvalue_is_one_when_every_draw_is_zero():
+    """A zero effect is not maximally significant. Ties at zero count both ways."""
+    draws = [0.0] * 200
+    assert bootstrap_pvalue(0.0, draws, n_boot=200) == pytest.approx(1.0)
+
+
+def test_bootstrap_pvalue_floors_when_every_draw_is_positive():
+    draws = [0.2] * 200
+    assert bootstrap_pvalue(0.2, draws, n_boot=200) == pytest.approx(1 / 201)
+
+
+def test_bootstrap_pvalue_counts_ties_at_zero_on_both_sides():
+    """A positive effect with some exact zeros is not at the floor."""
+    draws = [0.1] * 90 + [0.0] * 10
+    p = bootstrap_pvalue(0.1, draws, n_boot=100)
+    assert p == pytest.approx(0.20)
+    assert p > 1 / 101
+
+
 def test_paired_delta_carries_a_bootstrap_pvalue_at_the_floor():
     rows = []
     for i in range(60):
