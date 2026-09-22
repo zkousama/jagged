@@ -22,7 +22,7 @@ building on Jev.
 
 ## 2. Scope
 
-In: seven of the nine documented modes, two substrates, one model version.
+In: seven of the nine documented modes, one substrate, one model version.
 
 Out:
 - **Generation** (mode 9). Jev isn't trained to generate and the docs say so. Testing it
@@ -397,11 +397,6 @@ is what makes the positive findings believable.
 costs nothing on easy items and eighteen points on hard ones" is a difference-of-differences
 and needs its own CI. Pooled averages erase the unevenness the jaggedness page claims.
 
-**Cross-substrate replication, stated modestly.** Sign and rough magnitude agreeing across
-AfD and OSV is suggestive of a model property rather than a prompt artifact. Two substrates
-is not enough to call it general, and the write-up says so rather than letting readers
-infer more.
-
 **Figures:**
 1. dAccuracy by stratum, one line per mode — the degradation curves
 2. Reliability diagram, baseline against worst arm — the calibration result
@@ -435,7 +430,7 @@ jagged/
 |- src/jagged/
 |  |- items.py                 Item, Numeric
 |  |- substrate.py             the Protocol
-|  |- substrates/{afd,osv}.py
+|  |- substrates/afd.py
 |  |- conditions.py            the arms, pure functions
 |  |- runner.py                cache, interleaving, failure rows
 |  |- analysis.py              bootstrap, calibration, figures
@@ -460,8 +455,8 @@ re-analysis of committed trials, so README numbers are machine-verified.
 
 **Data hosting.** Gzipped JSONL in-repo, full raw bundle attached to a GitHub Release.
 
-**Licensing.** Code MIT. AfD text is CC BY-SA 4.0, so derived item sets inherit share-alike;
-OSV is CC-BY. `data/` carries its own LICENSE and attribution.
+**Licensing.** Code MIT. AfD text is CC BY-SA 4.0, so derived item sets inherit share-alike.
+`data/` carries its own LICENSE and attribution.
 
 ## 10. Shipping
 
@@ -471,9 +466,9 @@ AfD with every arm is a complete study on its own.
 
 To be carried into the write-up, not buried:
 
-- Two substrates is suggestive of generality, not evidence of it.
+- One substrate. The results describe Jev on Wikipedia deletion discussions, and §4.2's
+  OSV design is the replication that would test them on another task.
 - AfD outcomes carry social dynamics alongside policy; mitigated, not eliminated.
-- OSV data is clean relative to real-world inputs, so measured degradation is a lower bound.
 - Results pin to `jev-1.13` and to the jaggedness page at its stated review date, captured
   in the run manifest.
 - Modes 8 and 9 are measured or excluded rather than run as arms, so the one-piece-at-a-time
