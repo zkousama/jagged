@@ -162,3 +162,17 @@ def test_verdict_requires_clearing_zero_and_the_placebo():
     assert verdict(real, placebo, survived_fdr=True) == "effect"
     assert verdict(real, placebo, survived_fdr=False) == "null"
     assert verdict(noise, placebo, survived_fdr=True) == "null"
+
+
+def test_load_trials_reads_gzip_the_same_as_plain(tmp_path):
+    """The repo commits trials gzipped, so analyze has to read them as they ship."""
+    import gzip
+    rows = [_row("a", "baseline", 0, 0.9, True),
+            {**_row("b", "baseline", 0, None, False), "error": "429"}]
+    text = "\n".join(json.dumps(r) for r in rows)
+    plain = tmp_path / "t.jsonl"
+    plain.write_text(text)
+    gz = tmp_path / "t.jsonl.gz"
+    with gzip.open(gz, "wt", encoding="utf-8") as fh:
+        fh.write(text)
+    assert load_trials(gz) == load_trials(plain)

@@ -23,7 +23,7 @@ A live run talks to Vercel's AI Gateway. Put `AI_GATEWAY_API_KEY` in
 
 ```sh
 uv run jagged run --items 500 --repeats 3 --out data/trials/afd.jsonl
-uv run jagged analyze --trials data/trials/afd.jsonl
+uv run jagged analyze
 ```
 
 `jagged run` needs the key. `jagged analyze` does not: it reads committed

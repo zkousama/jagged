@@ -94,7 +94,7 @@ def main(argv=None) -> int:
     r.set_defaults(fn=_cmd_run)
 
     a = subs.add_parser("analyze")
-    a.add_argument("--trials", default="data/trials/afd.jsonl")
+    a.add_argument("--trials", default="data/trials/afd.jsonl.gz")
     a.add_argument("--out", default="figures")
     a.add_argument("--n-boot", type=int, default=2000)
     a.set_defaults(fn=_cmd_analyze)

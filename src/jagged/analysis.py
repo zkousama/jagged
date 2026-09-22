@@ -1,4 +1,5 @@
 import collections
+import gzip
 import json
 from pathlib import Path
 
@@ -50,8 +51,12 @@ def bootstrap_pvalue(point: float, draws, n_boot: int) -> float:
 
 
 def load_trials(path) -> tuple[list[dict], int]:
+    path = Path(path)
+    opener = gzip.open if path.suffix == ".gz" else open
+    with opener(path, "rt", encoding="utf-8") as fh:
+        lines = fh.read().splitlines()
     rows, dropped = [], 0
-    for line in Path(path).read_text(encoding="utf-8").splitlines():
+    for line in lines:
         if not line.strip():
             continue
         row = json.loads(line)
