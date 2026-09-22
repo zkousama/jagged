@@ -97,3 +97,40 @@ reproduced its result.
 The effect is the false fact. The full instruction lowered the mean probability from 0.73
 to 0.65 and changed one answer; the false fact on its own lowered it to 0.04 and changed
 all 24. The unrelated sentence changed none, so adding a field is not what does it.
+
+## Follow-up: the same judgment asked the other way round
+
+Pre-registered as the third noise floor, run 2026-09-22, after the main results were
+in. `scripts/invariance_probe.py`; every request and response is in
+`data/followup/invariance.jsonl.gz`.
+
+Each call carried the baseline state and the baseline questions, plus one more: the
+verdict reworded to ask whether the article was kept, with the criteria's sides swapped
+and the same boundary case. Instructions and criteria agree, and there's no double
+negative, so the only change is which way round the judgment is asked. Both questions
+share a call, so they read identical state. 3 repeats, as the main run, since repeated
+identical requests differ by up to 0.17.
+
+| Question | Accuracy | ECE | AUC |
+|---|---|---|---|
+| "was it deleted?" | 0.965 | 0.230 | 0.994 |
+| "was it kept?", turned round | 0.967 | 0.166 | 0.996 |
+
+Paired against each other: accuracy +0.002 [−0.006, +0.012], ECE −0.064 [−0.079,
+−0.050].
+
+P(deleted) + P(kept) averages 0.900, median 0.893, from 0.733 to 1.077. 20 of the 486
+sums are above 1, and 16.9% are within 0.05 of 1. The answers themselves agree: 5 of
+486 items land on different sides of 0.5.
+
+The probe's "was it deleted?" answers reproduce the main run a day later, in a call
+carrying a third question: mean difference +0.000, mean absolute difference 0.007, and
+the same accuracy, ECE and AUC to 3 decimals.
+
+**What it does to the decision rule.** The pre-registration says criteria and
+indirection have to clear this floor on top of the placebo, and leaves how to compare
+them open; the comparison here was chosen after these numbers were in. Turning the
+question round moves ECE by 0.064, more than criteria (+0.057) or indirection (+0.035),
+so neither arm's calibration change can be separated from the model's own sensitivity
+to which way round a judgment is asked. Both are reported as not clearing the floor.
+Padding inverts nothing, so this leaves it alone.
