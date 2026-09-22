@@ -44,3 +44,26 @@ February 20 stay unloaded.
 - Current model on the page: Jev 1.13, id `jev-1.13.0`
 - Aliases `jev-latest` and `jev-preview` both point at `jev-1.13.0`
 - Version strings on the page: `jev-1.13` and `jev-1.13.0`. No `jev-1.14`.
+
+## After the run
+
+Ran 2026-09-21 18:37 to 2026-09-22 05:54 UTC, 11.3 hours. 33,000 rows.
+
+- **Version.** The models page was archived after the run rather than at its finish
+  (`models-page-after.html`). It carries only `jev-1.13` and `jev-1.13.0`, as the
+  before-page did. A release would have had to ship and be withdrawn inside that window
+  to escape it, so the run is attributable by elimination. The gateway catalogue grew
+  from 376 to 380 models and still holds one TypeSafe entry.
+- **Errors.** 18 rows, 0.05%: 8 `504`, 2 `529`, 4 read timeouts, 4 dropped connections.
+  All server-side and transient, spread across arms including baseline. None is a `400`,
+  so `context_100` never exceeded the state limit and no failure is arm-dependent. The
+  runner retries `429` and `503` only; `504` and `529` were written as rows.
+- **Retries.** 402 rows retried once, 12 twice, 2 three times.
+- **Sample.** 486 unique items, not the registered 500. The loader does not deduplicate
+  across dates: `Fidel Vargas` was loaded 12 times and `Draim`, `Draim arena` and
+  `Savely Govorkov` twice each. Every duplicate row carries an identical probability,
+  since later copies were cache hits, and the analysis averages by item, so each counts
+  once. The shortfall is 14 items.
+- **Disjointness.** No main-run item appears in the pilot.
+- **Figures.** `jagged analyze` wrote no figures: it creates the output directory and
+  does not call the plotting functions.
