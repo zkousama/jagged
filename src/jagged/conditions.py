@@ -109,8 +109,8 @@ def indirection(item: Item, specs: Specs) -> Rendered:
     published verbatim in the write-up so readers can judge the equivalence.
 
     Mode 8 caveat: a complement of a complement is exactly the structure the page
-    warns does not behave arithmetically. Read this delta against the invariance
-    probe, not against zero.
+    warns does not behave arithmetically, so part of this delta may be that rather
+    than the indirection itself.
     """
     rewritten = (
         "The state describes a Wikipedia deletion discussion. "
@@ -131,8 +131,7 @@ def criteria(item: Item, specs: Specs) -> Rendered:
 
     Mode 8 caveat: the page says P(noul) and 1 - P(not noul) are not directly
     comparable, so this arm measures the contradiction effect plus whatever
-    structural non-invariance the model already carries. The invariance probe is
-    the floor it has to clear.
+    structural non-invariance the model already carries.
     """
     inverted = {
         "true": "The closing administrator retained the article.",

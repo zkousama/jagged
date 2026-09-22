@@ -28,13 +28,11 @@ Out:
 - **Generation** (mode 9). Jev isn't trained to generate and the docs say so. Testing it
   would be theatre. Stated in the write-up rather than faked.
 - **Common-sense structural invariants** (mode 8), as an arm. It doesn't fit the
-  one-variable-per-arm frame: the
-  page's claim is that separate questions don't stand in arithmetic relation to each
-  other, so there is no baseline to degrade from. It is also the cheapest of the nine to
-  measure — ask a judgment and its negation as separate Nouls, sum the probabilities,
-  report the distance from 1. The page's own example sums to 1.19. That belongs in the
-  write-up as a measured aside rather than a twelfth arm, and §5 records where it puts two
-  existing arms at risk.
+  one-variable-per-arm frame: the page's claim is that separate questions don't stand in
+  arithmetic relation to each other, so there is no baseline to degrade from. Measuring it
+  directly would mean asking a judgment and its negation as separate Nouls and reporting
+  how far their probabilities sum from 1; the page's own example sums to 1.19. v1 doesn't
+  run that probe, and §5 records where mode 8 puts two existing arms at risk.
 - **Comparisons against other models.** Four ecosystem repos already do Jev-vs-baseline.
   This measures Jev against its own documentation.
 - **Absolute capability claims.** "Jev is X% accurate at deletion debates" is not a result
@@ -227,9 +225,9 @@ own documentation has no answer for.
 to 1.19. The criteria arm inverts true/false polarity and the indirection arm routes the
 question through a double negative; both assume a complement behaves like a complement.
 Whatever they measure is the contradiction or indirection effect *plus* whatever structural
-non-invariance the model already carries. The invariance probe above is what separates them:
-run it on the same items, and its deviation from 1 is the floor those two arms have to clear,
-exactly as the placebo is the floor for the rest.
+non-invariance the model already carries. Separating the two would take the probe described
+in §2, which v1 doesn't run, so these two arms are reported with that caveat. Padding inverts
+nothing, which makes it the calibration result mode 8 doesn't touch.
 
 **The placebo is the second noise floor.** Field ordering is a change the docs give no
 reason to care about. Every real effect must clear it. If shuffling moves results as much
@@ -471,8 +469,9 @@ To be carried into the write-up, not buried:
 - AfD outcomes carry social dynamics alongside policy; mitigated, not eliminated.
 - Results pin to `jev-1.13` and to the jaggedness page at its stated review date, captured
   in the run manifest.
-- Modes 8 and 9 are measured or excluded rather than run as arms, so the one-piece-at-a-time
-  design covers seven of nine, and the write-up says which.
+- Modes 8 and 9 aren't run as arms, so the one-piece-at-a-time design covers seven of nine.
+  Mode 8 isn't measured directly either, so the criteria and indirection results carry its
+  caveat.
 - Item selection is budget-limited; strata are balanced by design but not exhaustive.
 
 ## 12. Open questions
