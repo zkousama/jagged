@@ -443,7 +443,7 @@ recomputes every published number from committed trials.
 
 **Python**, because the deliverable is statistics. Bootstrap CIs, AUC and calibration curves
 are the product, and hand-rolling numerics in TypeScript invites avoidable mistakes. msgspec for the item contract, matching the official SDK's
-internals; numpy/scipy for bootstrap; sklearn for AUC and calibration; matplotlib for
+internals; numpy for bootstrap; sklearn for AUC and calibration; matplotlib for
 figures; uv for the environment.
 
 **The test that matters** is a property test asserting each arm differs from baseline in
