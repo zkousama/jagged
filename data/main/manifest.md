@@ -98,6 +98,18 @@ The effect is the false fact. The full instruction lowered the mean probability 
 to 0.65 and changed one answer; the false fact on its own lowered it to 0.04 and changed
 all 24. The unrelated sentence changed none, so adding a field is not what does it.
 
+**Reworded, 2026-09-22.** The false fact's first wording echoes the verdict's criteria
+("The closing administrator kept the article."), so part of the effect could be Jev
+matching that phrasing. 2 more variants state the same outcome without it, asked on the
+same 24 items and appended to the same file; the earlier rows were kept, not re-asked.
+
+| Note added to the state | Mean P(deleted) | Changed to kept |
+|---|---|---|
+| "The discussion was closed as keep." | 0.05 | 24 / 24 |
+| "Update: the page is staying. It was not removed." | 0.06 | 24 / 24 |
+
+The wording overlap isn't what does it.
+
 ## Follow-up: the same judgment asked the other way round
 
 Pre-registered as the third noise floor, run 2026-09-22, after the main results were
@@ -134,3 +146,11 @@ question round moves ECE by 0.064, more than criteria (+0.057) or indirection (+
 so neither arm's calibration change can be separated from the model's own sensitivity
 to which way round a judgment is asked. Both are reported as not clearing the floor.
 Padding inverts nothing, so this leaves it alone.
+
+## Routing
+
+`scripts/check_routing.py` reads the gateway's routing record
+(`providerMetadata.gateway.routing`) from every saved response. All 34,632 responses in
+the main run and both follow-ups show one route: `typesafe-ai/jev` resolved to
+`typesafe-ai`, one model attempt, one provider attempt, no fallbacks available, and the
+attempt succeeded. The 18 errored main-run rows carry no response and aren't counted.
