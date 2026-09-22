@@ -31,6 +31,23 @@ class Delta(Struct, frozen=True):
     point: float
     lo: float
     hi: float
+    pvalue: float = 1.0
+
+
+def bootstrap_pvalue(point: float, draws, n_boot: int) -> float:
+    """Two-sided bootstrap p-value: twice the far-side share, floored at 1/(n_boot+1).
+
+    The far side is the side of zero opposite the point estimate. A stand-in of
+    0.001-or-0.5 cannot feed Benjamini-Hochberg; this is the p-value the
+    registration's q = 0.05 correction actually needs.
+    """
+    if not draws:
+        return 1.0
+    if point >= 0:
+        far = sum(1 for d in draws if d < 0)
+    else:
+        far = sum(1 for d in draws if d > 0)
+    return min(1.0, max(1 / (n_boot + 1), 2 * far / len(draws)))
 
 
 def load_trials(path) -> tuple[list[dict], int]:
@@ -89,7 +106,8 @@ def paired_delta(trials, base_arm: str, arm: str, metric: str = "auc",
         if not np.isnan(d):
             draws.append(d)
     lo, hi = np.percentile(draws, [2.5, 97.5]) if draws else (float("nan"),) * 2
-    return Delta(point=float(point), lo=float(lo), hi=float(hi))
+    return Delta(point=float(point), lo=float(lo), hi=float(hi),
+                 pvalue=bootstrap_pvalue(float(point), draws, n_boot))
 
 
 def family_deltas(trials, n_boot: int = 2000, seed: int = 1) -> dict[tuple[str, str], Delta]:
@@ -105,6 +123,23 @@ def family_deltas(trials, n_boot: int = 2000, seed: int = 1) -> dict[tuple[str, 
         for metric in PRIMARY_METRICS:
             out[(arm, metric)] = paired_delta(
                 trials, "baseline", arm, metric=metric, n_boot=n_boot,
+                seed=seed, question=question)
+    return out
+
+
+def sensitivity_contrasts(trials, n_boot: int = 2000, seed: int = 1) -> dict[tuple[str, str], Delta]:
+    """Each non-baseline, non-placebo arm minus placebo, same metric and question.
+
+    Not pre-registered. Printed after the registered verdicts so a threshold
+    artifact on the placebo band can be seen without becoming the decision.
+    """
+    arms = sorted({r["arm"] for r in trials} - {"baseline", "placebo"})
+    out: dict[tuple[str, str], Delta] = {}
+    for arm in arms:
+        question = question_for(arm)
+        for metric in PRIMARY_METRICS:
+            out[(arm, metric)] = paired_delta(
+                trials, "placebo", arm, metric=metric, n_boot=n_boot,
                 seed=seed, question=question)
     return out
 

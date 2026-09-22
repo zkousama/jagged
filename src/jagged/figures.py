@@ -28,20 +28,22 @@ def _save(fig, out) -> Path:
     return out
 
 
-def degradation_curves(trials_path, out, n_boot: int = 2000) -> Path:
+def degradation_curves(trials_path, out, n_boot: int = 2000, metric: str = "auc") -> Path:
     trials, _ = load_trials(trials_path)
     present = [s for s in STRATA if any(r["stratum"] == s for r in trials)]
     arms = sorted({r["arm"] for r in trials} - {"baseline", "placebo"})
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
     if "placebo" in {r["arm"] for r in trials}:
-        band = [paired_delta(trials, "baseline", "placebo", stratum=s, n_boot=n_boot)
+        band = [paired_delta(trials, "baseline", "placebo", stratum=s, n_boot=n_boot,
+                             metric=metric)
                 for s in present]
         ax.fill_between(range(len(present)),
                         [d.lo for d in band], [d.hi for d in band],
                         alpha=0.15, color=PALETTE[0], label="placebo band", zorder=1)
     for i, arm in enumerate(arms):
-        pts = [paired_delta(trials, "baseline", arm, stratum=s, n_boot=n_boot)
+        pts = [paired_delta(trials, "baseline", arm, stratum=s, n_boot=n_boot,
+                            metric=metric)
                for s in present]
         ax.plot(range(len(present)), [d.point for d in pts], marker="o",
                 color=PALETTE[i % len(PALETTE)], label=arm, zorder=3)
@@ -97,7 +99,7 @@ def reliability_diagram(trials_path, base_arm, worst_arm, out) -> Path:
     return _save(fig, out)
 
 
-def dose_response(trials_path, out) -> Path:
+def dose_response(trials_path, out, n_boot: int = 2000, metric: str = "auc") -> Path:
     trials, _ = load_trials(trials_path)
     xs, ys, los, his = [], [], [], []
     for arm, frac in DOSE_ARMS:
@@ -109,7 +111,7 @@ def dose_response(trials_path, out) -> Path:
             los.append(0.0)
             his.append(0.0)
             continue
-        d = paired_delta(trials, "baseline", arm)
+        d = paired_delta(trials, "baseline", arm, metric=metric, n_boot=n_boot)
         xs.append(frac)
         ys.append(d.point)
         los.append(d.lo)

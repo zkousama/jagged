@@ -2,9 +2,12 @@ import argparse
 import sys
 from pathlib import Path
 
-from jagged.analysis import (SECONDARY_METRIC, benjamini_hochberg, family_deltas,
-                             load_trials, paired_delta, question_for, verdict)
+from jagged.analysis import (PRIMARY_METRICS, SECONDARY_METRIC, benjamini_hochberg,
+                             family_deltas, load_trials, paired_delta,
+                             question_for, sensitivity_contrasts, verdict)
 from jagged.conditions import ARM_NAMES
+from jagged.figures import (degradation_curves, dose_response, forest_plot,
+                            reliability_diagram)
 
 
 def _cmd_run(args) -> int:
@@ -32,21 +35,45 @@ def _cmd_analyze(args) -> int:
     print(f"{len(trials)} trials, {dropped} errored")
     family = family_deltas(trials, n_boot=args.n_boot)
     arms = sorted({arm for arm, _ in family})
-    pvals = [0.001 if (d.lo > 0 or d.hi < 0) else 0.5 for d in family.values()]
+    pvals = [d.pvalue for d in family.values()]
     survived = benjamini_hochberg(pvals, q=0.05)
     for (key, d), ok in zip(family.items(), survived):
         arm, metric = key
         placebo = family.get(("placebo", metric))
         tag = verdict(d, placebo, ok) if placebo is not None else "n/a"
         print(f"{arm:14} [{question_for(arm):7}] {metric:8} {d.point:+.3f} "
-              f"[{d.lo:+.3f}, {d.hi:+.3f}]  {tag}")
+              f"[{d.lo:+.3f}, {d.hi:+.3f}]  p={d.pvalue:.4g}  {tag}")
     print("secondary (not in the FDR family)")
     for arm in arms:
         d = paired_delta(trials, "baseline", arm, metric=SECONDARY_METRIC,
                          question=question_for(arm), n_boot=args.n_boot)
         print(f"{arm:14} [{question_for(arm):7}] {SECONDARY_METRIC:8} {d.point:+.3f} "
-              f"[{d.lo:+.3f}, {d.hi:+.3f}]")
-    Path(args.out).mkdir(parents=True, exist_ok=True)
+              f"[{d.lo:+.3f}, {d.hi:+.3f}]  p={d.pvalue:.4g}")
+    print("sensitivity (not pre-registered): arm minus placebo")
+    for (arm, metric), d in sensitivity_contrasts(trials, n_boot=args.n_boot).items():
+        print(f"{arm:14} [{question_for(arm):7}] {metric:8} {d.point:+.3f} "
+              f"[{d.lo:+.3f}, {d.hi:+.3f}]  p={d.pvalue:.4g}")
+
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    paths = [
+        degradation_curves(args.trials, out / "degradation.png", n_boot=args.n_boot,
+                           metric="accuracy"),
+    ]
+    acc = {a: family[(a, "accuracy")] for a, m in family if m == "accuracy"}
+    candidates = {a: d for a, d in acc.items() if a != "placebo"} or acc
+    worst = min(candidates, key=lambda a: candidates[a].point)
+    paths.append(reliability_diagram(args.trials, "baseline", worst,
+                                     out / "reliability.png"))
+    paths.append(dose_response(args.trials, out / "dose-response.png",
+                               n_boot=args.n_boot, metric="accuracy"))
+    for metric in PRIMARY_METRICS:
+        deltas = {a: family[(a, metric)] for a, m in family
+                  if m == metric and a != "placebo"}
+        placebo = family[("placebo", metric)]
+        paths.append(forest_plot(deltas, placebo, out / f"forest-{metric}.png"))
+    for path in paths:
+        print(f"wrote {path}")
     return 0
 
 

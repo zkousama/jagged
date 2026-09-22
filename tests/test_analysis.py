@@ -2,8 +2,9 @@ import json
 
 import pytest
 from jagged.analysis import (PRIMARY_METRICS, Delta, benjamini_hochberg,
-                             collapse_repeats, family_deltas, load_trials,
-                             paired_delta, verdict)
+                             bootstrap_pvalue, collapse_repeats, family_deltas,
+                             load_trials, paired_delta, sensitivity_contrasts,
+                             verdict)
 
 
 def _row(item, arm, repeat, p, label, stratum="thin_unanimous", question="verdict"):
@@ -75,6 +76,46 @@ def test_paired_delta_names_the_empty_filter():
 
 def test_benjamini_hochberg_rejects_only_small_pvalues():
     assert benjamini_hochberg([0.001, 0.04, 0.8], q=0.05) == [True, False, False]
+
+
+def test_bootstrap_pvalue_floors_at_one_over_n_boot_plus_one():
+    """No draw on the far side of zero: the p-value is 1/(n_boot+1), not zero."""
+    draws = [-0.2] * 200
+    assert bootstrap_pvalue(-0.2, draws, n_boot=200) == pytest.approx(1 / 201)
+
+
+def test_bootstrap_pvalue_is_twice_the_far_side_share():
+    draws = [-0.1] * 90 + [0.05] * 10
+    assert bootstrap_pvalue(-0.1, draws, n_boot=100) == pytest.approx(0.20)
+
+
+def test_paired_delta_carries_a_bootstrap_pvalue_at_the_floor():
+    rows = []
+    for i in range(60):
+        lab = i % 2 == 0
+        rows.append(_row(f"i{i}", "baseline", 0, 0.95 if lab else 0.05, lab))
+        rows.append(_row(f"i{i}", "broken", 0, 0.5, lab))
+    d = paired_delta(rows, "baseline", "broken", metric="auc", n_boot=200, seed=1)
+    assert d.pvalue == pytest.approx(1 / 201)
+
+
+def test_sensitivity_contrast_is_the_arm_minus_placebo():
+    """A sensitivity row is a paired delta against placebo, not against baseline."""
+    rows = []
+    for i in range(40):
+        lab = i % 2 == 0
+        ok, mid, bad = (0.95 if lab else 0.05), (0.7 if lab else 0.3), 0.5
+        rows += [_row(f"i{i}", "baseline", 0, ok, lab),
+                 _row(f"i{i}", "placebo", 0, mid, lab),
+                 _row(f"i{i}", "broken", 0, bad, lab)]
+    got = sensitivity_contrasts(rows, n_boot=50, seed=1)
+    want = paired_delta(rows, "placebo", "broken", metric="accuracy",
+                        n_boot=50, seed=1, question="verdict")
+    assert ("broken", "accuracy") in got
+    assert got[("broken", "accuracy")].point == pytest.approx(want.point)
+    assert got[("broken", "accuracy")].lo == pytest.approx(want.lo)
+    assert "placebo" not in {a for a, _ in got}
+    assert "baseline" not in {a for a, _ in got}
 
 
 def test_family_deltas_is_arms_times_both_primaries():
